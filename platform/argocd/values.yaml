@@ -1,16 +1,9 @@
 global:
-  domain: argocd.k8s.bergtobias.com
+  domain: argocd.bergtobias.com
 
 server:
   ingress:
-    enabled: true
-    ingressClassName: traefik
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-prod
-      external-dns.alpha.kubernetes.io/managed: "true"
-    tls: true
-
-  # Traefik terminates TLS; ArgoCD runs plaintext internally
+    enabled: false
   extraArgs:
     - --insecure
 
@@ -19,12 +12,20 @@ configs:
     server.insecure: "true"
 
   cm:
-    # Disable anonymous access
     users.anonymous.enabled: "false"
-    # Use server-side diff for better accuracy
     application.resourceTrackingMethod: annotation
+    url: https://argocd.bergtobias.com
+    oidc.config: |
+      name: Authentik
+      issuer: https://authentik.bergtobias.com/application/o/argocd/
+      clientID: argocd
+      clientSecret: $oidc.authentik.clientSecret
+      requestedScopes:
+        - openid
+        - profile
+        - email
 
   rbac:
     policy.default: role:readonly
     policy.csv: |
-      g, argocd-admins, role:admin
+      g, akadmin, role:admin
