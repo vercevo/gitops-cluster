@@ -93,15 +93,18 @@ data:
         print("ERROR: Harbor never became healthy", file=sys.stderr)
         sys.exit(1)
 
-    # Create ghcr.io registry endpoint
+    # Create ghcr.io registry endpoint (no credential — workflow sets it on each push)
     _, regs = api("GET", "/registries?name=ghcr.io")
     if not regs:
-        s, _ = api("POST", "/registries", {
-            "name": "ghcr.io", "type": "docker-registry",
+        s, resp = api("POST", "/registries", {
+            "name": "ghcr.io",
+            "type": "github-ghcr",
             "url": "https://ghcr.io",
-            "credential": {"type": "basic", "access_key": "x-access-token", "access_secret": "placeholder"},
             "insecure": False})
-        print(f"Created ghcr.io registry: {s}")
+        print(f"Created ghcr.io registry: {s} {resp}")
+        if s not in (201, 200):
+            print(f"ERROR: registry creation failed", file=sys.stderr)
+            sys.exit(1)
         _, regs = api("GET", "/registries?name=ghcr.io")
     registry_id = regs[0]["id"]
     print(f"Registry ID: {registry_id}")
