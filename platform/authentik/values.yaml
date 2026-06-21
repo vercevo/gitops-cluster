@@ -1,4 +1,3 @@
-# All authentik config via AUTHENTIK_* env vars — avoids Attr nesting issues
 global:
   env:
     - name: AUTHENTIK_SECRET_KEY
@@ -7,7 +6,7 @@ global:
           name: authentik-secrets
           key: secret-key
     - name: AUTHENTIK_POSTGRESQL__HOST
-      value: authentik-postgresql
+      value: authentik-pg-rw
     - name: AUTHENTIK_POSTGRESQL__NAME
       value: authentik
     - name: AUTHENTIK_POSTGRESQL__USER
@@ -15,14 +14,13 @@ global:
     - name: AUTHENTIK_POSTGRESQL__PASSWORD
       valueFrom:
         secretKeyRef:
-          name: authentik-secrets
-          key: postgresql-password
+          name: authentik-pg-user
+          key: password
     - name: AUTHENTIK_REDIS__HOST
       value: authentik-redis
     - name: AUTHENTIK_LOG_LEVEL
       value: info
 
-# Disable bundled Bitnami subcharts (broken image tags)
 postgresql:
   enabled: false
 
