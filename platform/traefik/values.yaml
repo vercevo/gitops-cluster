@@ -12,12 +12,12 @@ ingressClass:
 
 providers:
   kubernetesIngress:
-    enabled: true
-    publishedService:
-      enabled: true
+    enabled: false
   kubernetesCRD:
     enabled: true
     allowCrossNamespace: true
+  kubernetesGateway:
+    enabled: true
 
 ports:
   web:

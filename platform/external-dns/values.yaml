@@ -24,6 +24,11 @@ sources:
 # to opt individual resources in. Alternatively, use txtOwnerId to track ownership.
 txtOwnerId: k8s-bergtobias
 
+# Route all ingress hostnames through the Cloudflare Tunnel CNAME.
+# Cloudflare proxies the CNAME and issues individual TLS certs per hostname.
+defaultTargets:
+  - 07a7a2df-49c5-41a5-8e59-6403b236a5d5.cfargotunnel.com
+
 # Only process resources with this annotation to avoid touching unintended records.
 # Remove to auto-register all Ingress hosts.
 annotationFilter: "external-dns.alpha.kubernetes.io/managed=true"
