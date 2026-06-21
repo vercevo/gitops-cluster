@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backstage
+  namespace: backstage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backstage
+  template:
+    metadata:
+      labels:
+        app: backstage
+    spec:
+      serviceAccountName: default
+      containers:
+        - name: backstage
+          image: ghcr.io/vercevo/backstage:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 7007
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: APP_CONFIG_app_baseUrl
+              value: https://backstage.bergtobias.com
+            - name: APP_CONFIG_backend_baseUrl
+              value: https://backstage.bergtobias.com
+            - name: APP_BASE_URL
+              value: https://backstage.bergtobias.com
+            - name: BACKEND_BASE_URL
+              value: https://backstage.bergtobias.com
+            - name: AUTH_ENVIRONMENT
+              value: production
+            - name: AUTHENTIK_BASE_URL
+              value: https://authentik.bergtobias.com
+            - name: AUTHENTIK_CLIENT_ID
+              value: backstage
+            - name: AUTHENTIK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-secrets
+                  key: authentik-client-secret
+            - name: BACKEND_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-secrets
+                  key: backend-secret
+            - name: POSTGRES_HOST
+              value: backstage-pg-rw
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: backstage
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-pg-user
+                  key: password
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-secrets
+                  key: github-app-id
+            - name: GITHUB_APP_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-secrets
+                  key: github-app-client-id
+            - name: GITHUB_APP_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-secrets
+                  key: github-app-client-secret
+            - name: GITHUB_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-secrets
+                  key: github-app-webhook-secret
+            - name: GITHUB_APP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-github-key
+                  key: private-key
+            - name: GITHUB_ORG
+              value: vercevo
+            - name: K8S_URL
+              value: https://kubernetes.default.svc
+            - name: K8S_SA_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-k8s
+                  key: sa-token
+            - name: ARGOCD_BASE_URL
+              value: https://argocd.bergtobias.com
+            - name: ARGOCD_AUTH_TOKEN
+              value: ""
+          readinessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 7007
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 7007
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backstage
+  namespace: backstage
+spec:
+  selector:
+    app: backstage
+  ports:
+    - port: 80
+      targetPort: 7007
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backstage
+  namespace: backstage
+  annotations:
+    external-dns.alpha.kubernetes.io/managed: "true"
+    external-dns.alpha.kubernetes.io/hostname: backstage.bergtobias.com
+spec:
+  parentRefs:
+    - name: main
+      namespace: traefik
+      sectionName: websecure
+  hostnames:
+    - backstage.bergtobias.com
+  rules:
+    - backendRefs:
+        - name: backstage
+          port: 80
