@@ -12,7 +12,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: REPO_URL_PLACEHOLDER
+    repoURL: https://github.com/vercevo/gitops-cluster
     targetRevision: HEAD
     path: platform/cert-manager-issuers
     directory:

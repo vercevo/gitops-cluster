@@ -1,5 +1,5 @@
 # Applied once by bootstrap.sh — seeds the GitOps control loop.
-# configure.sh substitutes REPO_URL_PLACEHOLDER before you commit.
+# configure.sh substitutes https://github.com/vercevo/gitops-cluster before you commit.
 apiVersion: v1
 kind: List
 items:
@@ -13,7 +13,7 @@ items:
     spec:
       project: default
       source:
-        repoURL: REPO_URL_PLACEHOLDER
+        repoURL: https://github.com/vercevo/gitops-cluster
         targetRevision: HEAD
         path: platform
         directory:
@@ -39,7 +39,7 @@ items:
     spec:
       project: default
       source:
-        repoURL: REPO_URL_PLACEHOLDER
+        repoURL: https://github.com/vercevo/gitops-cluster
         targetRevision: HEAD
         path: applications
         directory:

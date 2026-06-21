@@ -16,7 +16,7 @@ spec:
       helm:
         valueFiles:
           - $values/platform/argocd/values.yaml
-    - repoURL: REPO_URL_PLACEHOLDER
+    - repoURL: https://github.com/vercevo/gitops-cluster
       targetRevision: HEAD
       ref: values
   destination:

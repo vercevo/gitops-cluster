@@ -16,7 +16,7 @@ spec:
       helm:
         valueFiles:
           - $values/platform/external-dns/values.yaml
-    - repoURL: REPO_URL_PLACEHOLDER
+    - repoURL: https://github.com/vercevo/gitops-cluster
       targetRevision: HEAD
       ref: values
   destination:
