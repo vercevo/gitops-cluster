@@ -1,0 +1,40 @@
+authentik:
+  secret_key:
+    valueFrom:
+      secretKeyRef:
+        name: authentik-secrets
+        key: secret-key
+  postgresql:
+    host: authentik-postgresql
+    name: authentik
+    user: authentik
+    password:
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secrets
+          key: postgresql-password
+  redis:
+    host: authentik-redis-master
+
+postgresql:
+  enabled: true
+  auth:
+    username: authentik
+    database: authentik
+    existingSecret: authentik-secrets
+    secretKeys:
+      userPasswordKey: postgresql-password
+
+redis:
+  enabled: true
+  auth:
+    enabled: false
+
+server:
+  ingress:
+    enabled: false
+
+global:
+  env:
+    - name: AUTHENTIK_LOG_LEVEL
+      value: info
