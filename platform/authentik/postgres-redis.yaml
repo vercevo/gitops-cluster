@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authentik-postgres-init
+  namespace: authentik
+data:
+  init.sql: |
+    CREATE DATABASE authentik;
+    CREATE USER authentik WITH PASSWORD 'REPLACED_AT_RUNTIME';
+    GRANT ALL PRIVILEGES ON DATABASE authentik TO authentik;
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: authentik-postgresql
+  namespace: authentik
+spec:
+  serviceName: authentik-postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authentik-postgresql
+  template:
+    metadata:
+      labels:
+        app: authentik-postgresql
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15
+          env:
+            - name: POSTGRES_DB
+              value: authentik
+            - name: POSTGRES_USER
+              value: authentik
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: authentik-secrets
+                  key: postgresql-password
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authentik-postgresql
+  namespace: authentik
+spec:
+  selector:
+    app: authentik-postgresql
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authentik-redis
+  namespace: authentik
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authentik-redis
+  template:
+    metadata:
+      labels:
+        app: authentik-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authentik-redis
+  namespace: authentik
+spec:
+  selector:
+    app: authentik-redis
+  ports:
+    - port: 6379

@@ -14,21 +14,14 @@ authentik:
           name: authentik-secrets
           key: postgresql-password
   redis:
-    host: authentik-redis-master
+    host: authentik-redis
 
+# Disable bundled Bitnami subcharts (broken image tags)
 postgresql:
-  enabled: true
-  auth:
-    username: authentik
-    database: authentik
-    existingSecret: authentik-secrets
-    secretKeys:
-      userPasswordKey: postgresql-password
+  enabled: false
 
 redis:
-  enabled: true
-  auth:
-    enabled: false
+  enabled: false
 
 server:
   ingress:
