@@ -1,12 +1,4 @@
-authentik:
-  postgresql:
-    host: authentik-postgresql
-    name: authentik
-    user: authentik
-  redis:
-    host: authentik-redis
-
-# Pass secrets via env vars — authentik maps AUTHENTIK_* env vars to config
+# All authentik config via AUTHENTIK_* env vars — avoids Attr nesting issues
 global:
   env:
     - name: AUTHENTIK_SECRET_KEY
@@ -14,11 +6,19 @@ global:
         secretKeyRef:
           name: authentik-secrets
           key: secret-key
+    - name: AUTHENTIK_POSTGRESQL__HOST
+      value: authentik-postgresql
+    - name: AUTHENTIK_POSTGRESQL__NAME
+      value: authentik
+    - name: AUTHENTIK_POSTGRESQL__USER
+      value: authentik
     - name: AUTHENTIK_POSTGRESQL__PASSWORD
       valueFrom:
         secretKeyRef:
           name: authentik-secrets
           key: postgresql-password
+    - name: AUTHENTIK_REDIS__HOST
+      value: authentik-redis
     - name: AUTHENTIK_LOG_LEVEL
       value: info
 
