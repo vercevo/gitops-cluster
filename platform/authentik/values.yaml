@@ -1,20 +1,26 @@
 authentik:
-  secret_key:
-    valueFrom:
-      secretKeyRef:
-        name: authentik-secrets
-        key: secret-key
   postgresql:
     host: authentik-postgresql
     name: authentik
     user: authentik
-    password:
+  redis:
+    host: authentik-redis
+
+# Pass secrets via env vars — authentik maps AUTHENTIK_* env vars to config
+global:
+  env:
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secrets
+          key: secret-key
+    - name: AUTHENTIK_POSTGRESQL__PASSWORD
       valueFrom:
         secretKeyRef:
           name: authentik-secrets
           key: postgresql-password
-  redis:
-    host: authentik-redis
+    - name: AUTHENTIK_LOG_LEVEL
+      value: info
 
 # Disable bundled Bitnami subcharts (broken image tags)
 postgresql:
@@ -26,8 +32,3 @@ redis:
 server:
   ingress:
     enabled: false
-
-global:
-  env:
-    - name: AUTHENTIK_LOG_LEVEL
-      value: info
