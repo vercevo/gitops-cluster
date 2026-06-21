@@ -1,12 +1,13 @@
 global:
-  domain: argocd.CLUSTER_DOMAIN_PLACEHOLDER
+  domain: argocd.k8s.bergtobias.com
 
 server:
   ingress:
     enabled: true
     ingressClassName: traefik
     annotations:
-      cert-manager.io/cluster-issuer: selfsigned
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      external-dns.alpha.kubernetes.io/managed: "true"
     tls: true
 
   # Traefik terminates TLS; ArgoCD runs plaintext internally

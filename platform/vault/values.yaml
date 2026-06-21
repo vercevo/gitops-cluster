@@ -30,15 +30,16 @@ server:
     enabled: true
     ingressClassName: traefik
     annotations:
-      cert-manager.io/cluster-issuer: selfsigned
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      external-dns.alpha.kubernetes.io/managed: "true"
     hosts:
-      - host: vault.CLUSTER_DOMAIN_PLACEHOLDER
+      - host: vault.k8s.bergtobias.com
         paths:
           - /
     tls:
       - secretName: vault-tls
         hosts:
-          - vault.CLUSTER_DOMAIN_PLACEHOLDER
+          - vault.k8s.bergtobias.com
 
 ui:
   enabled: true

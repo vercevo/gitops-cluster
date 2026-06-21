@@ -1,0 +1,18 @@
+---
+# Wildcard certificate for *.k8s.bergtobias.com
+# Stored in the traefik namespace so Traefik can reference it via TLSStore.
+# cert-manager renews it automatically via Cloudflare DNS-01.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-k8s-bergtobias-com
+  namespace: traefik
+spec:
+  secretName: wildcard-k8s-bergtobias-com-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: "*.k8s.bergtobias.com"
+  dnsNames:
+    - "*.k8s.bergtobias.com"
+    - "k8s.bergtobias.com"

@@ -16,7 +16,7 @@ spec:
     targetRevision: HEAD
     path: platform/cert-manager-issuers
     directory:
-      include: "cluster-issuer.yaml"
+      include: "{cluster-issuer,wildcard-cert}.yaml"
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
