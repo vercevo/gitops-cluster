@@ -13,7 +13,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 info() { echo "[bootstrap] $*"; }
 
 # ── 1. k3s ───────────────────────────────────────────────────────────────────
-if ! command -v k3s &>/dev/null; then
+if ! systemctl is-active --quiet k3s 2>/dev/null; then
   info "Installing k3s ${K3S_VERSION}..."
   curl -sfL https://get.k3s.io | \
     INSTALL_K3S_VERSION="${K3S_VERSION}" \
@@ -22,7 +22,7 @@ if ! command -v k3s &>/dev/null; then
       --write-kubeconfig-mode 644
   info "k3s installed."
 else
-  info "k3s already present, skipping install."
+  info "k3s already running, skipping install."
 fi
 
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml

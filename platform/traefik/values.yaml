@@ -3,6 +3,8 @@ deployment:
 
 service:
   type: LoadBalancer
+  externalIPs:
+    - 83.233.119.184
 
 ingressClass:
   enabled: true

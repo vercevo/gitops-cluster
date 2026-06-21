@@ -17,7 +17,7 @@ items:
         targetRevision: HEAD
         path: platform
         directory:
-          recurse: false
+          recurse: true
           include: "*/application.yaml"
       destination:
         server: https://kubernetes.default.svc
@@ -43,7 +43,7 @@ items:
         targetRevision: HEAD
         path: applications
         directory:
-          recurse: false
+          recurse: true
           include: "*/application.yaml"
       destination:
         server: https://kubernetes.default.svc
