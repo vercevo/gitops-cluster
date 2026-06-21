@@ -1,0 +1,56 @@
+# Applied once by bootstrap.sh — seeds the GitOps control loop.
+# configure.sh substitutes REPO_URL_PLACEHOLDER before you commit.
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: platform
+      namespace: argocd
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: REPO_URL_PLACEHOLDER
+        targetRevision: HEAD
+        path: platform
+        directory:
+          recurse: false
+          include: "*/application.yaml"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: argocd
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+
+  - apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: applications
+      namespace: argocd
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: REPO_URL_PLACEHOLDER
+        targetRevision: HEAD
+        path: applications
+        directory:
+          recurse: false
+          include: "*/application.yaml"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: argocd
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

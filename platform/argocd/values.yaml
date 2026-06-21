@@ -1,0 +1,29 @@
+global:
+  domain: argocd.CLUSTER_DOMAIN_PLACEHOLDER
+
+server:
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: selfsigned
+    tls: true
+
+  # Traefik terminates TLS; ArgoCD runs plaintext internally
+  extraArgs:
+    - --insecure
+
+configs:
+  params:
+    server.insecure: "true"
+
+  cm:
+    # Disable anonymous access
+    users.anonymous.enabled: "false"
+    # Use server-side diff for better accuracy
+    application.resourceTrackingMethod: annotation
+
+  rbac:
+    policy.default: role:readonly
+    policy.csv: |
+      g, argocd-admins, role:admin

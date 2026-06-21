@@ -1,0 +1,45 @@
+server:
+  standalone:
+    enabled: true
+    config: |
+      ui = true
+
+      listener "tcp" {
+        tls_disable     = 1
+        address         = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      storage "file" {
+        path = "/vault/data"
+      }
+
+      # For production, replace file storage with auto-unseal:
+      # seal "awskms" {
+      #   region     = "us-east-1"
+      #   kms_key_id = "alias/vault-unseal"
+      # }
+      # And use storage "raft" or "consul" for HA.
+
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: local-path  # k3s default (rancher/local-path-provisioner)
+
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: selfsigned
+    hosts:
+      - host: vault.CLUSTER_DOMAIN_PLACEHOLDER
+        paths:
+          - /
+    tls:
+      - secretName: vault-tls
+        hosts:
+          - vault.CLUSTER_DOMAIN_PLACEHOLDER
+
+ui:
+  enabled: true
+  serviceType: ClusterIP

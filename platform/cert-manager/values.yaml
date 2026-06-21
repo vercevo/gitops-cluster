@@ -1,0 +1,9 @@
+crds:
+  enabled: true   # install / upgrade CRDs via Helm
+
+replicaCount: 1
+
+prometheus:
+  enabled: true
+  servicemonitor:
+    enabled: false  # set true when prometheus-operator is installed
