@@ -3,6 +3,7 @@
 # Outputs unseal key + root token — back them up securely.
 set -euo pipefail
 
+export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 VAULT_NS="vault"
 
 info() { echo "[vault-init] $*"; }

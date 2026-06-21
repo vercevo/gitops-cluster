@@ -10,6 +10,7 @@
 # Create token at: https://dash.cloudflare.com/profile/api-tokens
 set -euo pipefail
 
+export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 CF_API_TOKEN="${CF_API_TOKEN:?Set CF_API_TOKEN to your Cloudflare API token}"
 
 info() { echo "[cloudflare-secret] $*"; }

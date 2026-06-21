@@ -3,6 +3,7 @@
 # Usage: VAULT_TOKEN=<root-token> ./bootstrap/vault-configure.sh
 set -euo pipefail
 
+export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 VAULT_NS="vault"
 LOCAL_PORT="8200"
 
