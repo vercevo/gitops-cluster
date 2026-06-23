@@ -11,7 +11,7 @@ spec:
   managed:
     roles:
       - name: backstage
-        createDatabase: true
+        createdb: true
         login: true
         passwordSecret:
           name: backstage-pg-user
