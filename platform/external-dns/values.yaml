@@ -13,7 +13,7 @@ domainFilters:
   - bergtobias.com
 
 # Sync mode: upsert-only is safer to start; switch to sync to auto-delete stale records.
-policy: upsert-only
+policy: sync
 
 # Sources to watch for hostnames
 sources:
