@@ -50,9 +50,26 @@ spec:
           maxRunners: 3
           containerMode:
             type: dind
+            dindSidecarSpec:
+              volumeMounts:
+                - name: docker-daemon-config
+                  mountPath: /etc/docker/daemon.json
+                  subPath: daemon.json
+          template:
+            spec:
+              volumes:
+                - name: docker-daemon-config
+                  configMap:
+                    name: dind-daemon-config
           controllerServiceAccount:
             name: arc-gha-rs-controller
             namespace: arc-systems
+    - repoURL: https://github.com/vercevo/gitops-cluster
+      targetRevision: HEAD
+      path: platform/arc
+      directory:
+        include: "*.yaml"
+        exclude: "application.yaml"
   destination:
     server: https://kubernetes.default.svc
     namespace: arc-runners
