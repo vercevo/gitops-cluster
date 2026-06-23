@@ -1,8 +1,6 @@
 provider:
   name: cloudflare
 
-cloudflare:
-  proxied: true
 
 env:
   - name: CF_API_TOKEN
@@ -36,3 +34,4 @@ logLevel: info
 
 extraArgs:
   - --default-targets=07a7a2df-49c5-41a5-8e59-6403b236a5d5.cfargotunnel.com
+  - --cloudflare-proxied
