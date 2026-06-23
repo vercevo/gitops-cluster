@@ -10,7 +10,7 @@ env:
 
 # Only manage records under the cluster subdomain — never touch the root zone.
 domainFilters:
-  - k8s.bergtobias.com
+  - bergtobias.com
 
 # Sync mode: upsert-only is safer to start; switch to sync to auto-delete stale records.
 policy: upsert-only
@@ -19,6 +19,7 @@ policy: upsert-only
 sources:
   - ingress
   - service
+  - gateway-httproute
 
 # Annotate services/ingresses with external-dns.alpha.kubernetes.io/hostname
 # to opt individual resources in. Alternatively, use txtOwnerId to track ownership.
