@@ -5,9 +5,6 @@ metadata:
   namespace: harbor
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    external-dns.alpha.kubernetes.io/managed: "true"
-    external-dns.alpha.kubernetes.io/hostname: harbor.bergtobias.com
-    external-dns.alpha.kubernetes.io/target: "07a7a2df-49c5-41a5-8e59-6403b236a5d5.cfargotunnel.com"
 spec:
   ingressClassName: traefik
   rules:
