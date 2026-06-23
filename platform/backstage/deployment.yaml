@@ -47,6 +47,11 @@ spec:
                 secretKeyRef:
                   name: backstage-secrets
                   key: backend-secret
+            - name: AUTH_SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-secrets
+                  key: backend-secret
             - name: POSTGRES_HOST
               value: backstage-pg-rw
             - name: POSTGRES_PORT
