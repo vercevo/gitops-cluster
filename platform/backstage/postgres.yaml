@@ -8,6 +8,13 @@ spec:
   imageName: ghcr.io/cloudnative-pg/postgresql:15
   storage:
     size: 10Gi
+  managed:
+    roles:
+      - name: backstage
+        createDb: true
+        login: true
+        passwordSecret:
+          name: backstage-pg-user
   bootstrap:
     initdb:
       database: backstage
