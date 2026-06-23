@@ -1,7 +1,5 @@
 provider:
   name: cloudflare
-  webhook:
-    image: {}
 
 cloudflare:
   proxied: true
