@@ -14,11 +14,9 @@ spec:
         app: backstage
     spec:
       serviceAccountName: default
-      imagePullSecrets:
-        - name: harbor-pull
       containers:
         - name: backstage
-          image: harbor.bergtobias.com/vercevo/backstage:latest
+          image: ghcr.io/vercevo/backstage:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 7007
