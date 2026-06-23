@@ -91,7 +91,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: backstage-k8s
-                  key: sa-token
+                  key: token
             - name: ARGOCD_BASE_URL
               value: https://argocd.bergtobias.com
             - name: ARGOCD_AUTH_TOKEN
