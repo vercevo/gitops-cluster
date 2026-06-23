@@ -145,5 +145,12 @@ spec:
     - backstage.bergtobias.com
   rules:
     - backendRefs:
-        - name: backstage
+        - group: ""
+          kind: Service
+          name: backstage
           port: 80
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
