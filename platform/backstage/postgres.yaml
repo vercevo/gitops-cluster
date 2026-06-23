@@ -11,8 +11,11 @@ spec:
   managed:
     roles:
       - name: backstage
+        ensure: present
         createdb: true
         login: true
+        inherit: true
+        connectionLimit: -1
         passwordSecret:
           name: backstage-pg-user
   bootstrap:

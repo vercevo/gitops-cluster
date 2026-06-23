@@ -143,7 +143,9 @@ metadata:
     external-dns.alpha.kubernetes.io/hostname: backstage.bergtobias.com
 spec:
   parentRefs:
-    - name: main
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: main
       namespace: traefik
       sectionName: websecure
   hostnames:
