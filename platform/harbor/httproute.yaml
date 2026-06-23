@@ -14,8 +14,11 @@ spec:
     sectionName: websecure
   rules:
   - backendRefs:
-    - name: harbor
+    - group: ""
+      kind: Service
+      name: harbor
       port: 80
+      weight: 1
     matches:
     - path:
         type: PathPrefix
