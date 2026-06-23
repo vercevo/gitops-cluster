@@ -1,0 +1,33 @@
+apiVersion: minio.min.io/v2
+kind: Tenant
+metadata:
+  name: techdocs
+  namespace: minio
+  labels:
+    app: minio
+spec:
+  # Root credentials live in this secret (config.env). Created via bootstrap,
+  # NOT in git. See bootstrap/minio-secret.sh.
+  configuration:
+    name: minio-tenant-config
+  # Homelab: TLS is terminated at Traefik/Cloudflare, so the tenant serves
+  # plain HTTP internally. Disable the operator's self-signed cert.
+  requestAutoCert: false
+  pools:
+    - name: pool-0
+      # Single-node single-drive (SNSD) — sufficient for static TechDocs HTML.
+      servers: 1
+      volumesPerServer: 1
+      volumeClaimTemplate:
+        metadata:
+          name: data
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          storageClassName: local-path
+          resources:
+            requests:
+              storage: 10Gi
+  # Operator auto-creates this bucket on first reconcile.
+  buckets:
+    - name: techdocs

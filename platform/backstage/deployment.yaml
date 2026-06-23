@@ -101,6 +101,19 @@ spec:
               value: https://argocd.bergtobias.com
             - name: ARGOCD_AUTH_TOKEN
               value: ""
+            # TechDocs reads pre-built docs from MinIO (in-cluster S3 endpoint).
+            - name: MINIO_ENDPOINT
+              value: http://minio.minio.svc.cluster.local
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-techdocs
+                  key: access-key
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-techdocs
+                  key: secret-key
           readinessProbe:
             httpGet:
               path: /healthcheck
