@@ -1,0 +1,60 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arc-systems
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    - repoURL: https://actions-runner-controller.github.io/actions-runner-controller
+      chart: gha-runner-scale-set-controller
+      targetRevision: 0.*
+      helm:
+        releaseName: arc
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: arc-systems
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arc-runners
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    - repoURL: https://actions-runner-controller.github.io/actions-runner-controller
+      chart: gha-runner-scale-set
+      targetRevision: 0.*
+      helm:
+        releaseName: arc-runner-set
+        values: |
+          githubConfigUrl: https://github.com/vercevo/backstage
+          githubConfigSecret: arc-github-app
+          minRunners: 1
+          maxRunners: 3
+          containerMode:
+            type: dind
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: arc-runners
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
