@@ -1,5 +1,10 @@
 provider:
   name: cloudflare
+  webhook:
+    image: {}
+
+cloudflare:
+  proxied: true
 
 env:
   - name: CF_API_TOKEN
