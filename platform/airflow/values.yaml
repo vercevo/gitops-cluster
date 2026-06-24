@@ -159,13 +159,11 @@ workers:
       cpu: 100m
       memory: 256Mi
 
-# DAGs git-sync. TEMPORARILY DISABLED: vercevo/airflow-dags is private, so anonymous
-# HTTPS git-sync fails ("Repository not found"), which keeps triggerer/dag-processor
-# unhealthy and wedges ArgoCD sync. Re-enable once repo auth is configured (SSH deploy
-# key -> sshKeySecret: airflow-dags-git + git@ URL, make the repo public, or a PAT).
+# DAGs git-sync from the (now public) vercevo/airflow-dags repo — anonymous HTTPS clone.
+# If it's ever made private again, add `sshKeySecret: airflow-dags-git` + a git@ URL.
 dags:
   gitSync:
-    enabled: false
+    enabled: true
     repo: https://github.com/vercevo/airflow-dags.git
     branch: main
     ref: main
