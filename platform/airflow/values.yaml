@@ -92,8 +92,10 @@ apiServer:
     AUTH_USER_REGISTRATION_ROLE = "Public"   # no access until a group grants a role
     AUTH_ROLES_SYNC_AT_LOGIN = True
 
-    # Map Authentik group names -> Airflow (FAB) roles.
+    # Map Authentik group names -> Airflow (FAB) roles. `dev-admins` is the existing
+    # platform admin group; `airflow-admins` is also honored for app-scoped grants.
     AUTH_ROLES_MAPPING = {
+        "dev-admins": ["Admin"],
         "airflow-admins": ["Admin"],
         "airflow-users": ["User"],
     }
