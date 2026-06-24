@@ -5,6 +5,11 @@
 imagePullSecrets:
   - name: ghcr-pull
 
+global:
+  # The chart reads the metadata-DB password (key `postgresql-password`) from
+  # THIS secret name — not from postgresql.postgresqlSecretName below.
+  postgresqlSecretName: dagster-pg-user
+
 # ---- Our code location (gRPC server from the image CI publishes) -------------
 dagster-user-deployments:
   enabled: true
