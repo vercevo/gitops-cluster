@@ -172,13 +172,26 @@ entries below.
   (ns `airflow`). Official Helm chart (`apache-airflow/airflow`, multi-source app
   + `platform/airflow/values.yaml`). `KubernetesExecutor` (tasks run as pods, no
   Celery/Redis); metadata DB is a CNPG `Cluster` (`airflow-pg`). Login is
-  **Authentik OIDC** via the FAB auth manager (`webserver.webserverConfig`); the
-  UI is served by Service `airflow-api-server:8080` (Airflow 3 has no `webserver`
-  service). Authentik groups map to roles: `airflow-admins` → Admin,
-  `airflow-users` → User. DAGs are git-synced from `vercevo/airflow-dags`
-  (`dags/` subpath). Secrets via `bootstrap/airflow-secret.sh`. **Gotcha:** the
-  Airflow 3 OAuth callback is `/auth/oauth-authorized/authentik` (the `/auth`
-  prefix is new in 3.x — `/oauth-authorized/authentik` is the 2.x path).
+  **Authentik OIDC** via the FAB auth manager (chart default `[core] auth_manager`).
+  The UI **and** FAB auth run in Service `airflow-api-server:8080` (Airflow 3 has no
+  `webserver` service). Authentik groups map to roles: `airflow-admins` → Admin,
+  `airflow-users` → User. DAGs git-sync from `vercevo/airflow-dags` (`dags/` subpath).
+  Secrets via `bootstrap/airflow-secret.sh`. **Gotchas (all cost real time):**
+  - **OIDC config goes in `apiServer.apiServerConfig`, NOT `webserver.webserverConfig`.**
+    On chart 1.22/Airflow 3 only `apiServer.apiServerConfig` is mounted into the
+    api-server (as `/opt/airflow/webserver_config.py`); the legacy `webserver.*` key
+    is mounted into scheduler/triggerer/etc but not the api-server, so `AUTH_OAUTH`
+    there silently no-ops and FAB shows the DB username/password form.
+  - **OAuth callback is `/auth/oauth-authorized/authentik`** (the `/auth` prefix is new
+    in 3.x; verified from the live authorize redirect, not guessed).
+  - **DB-migration/create-user jobs must be ArgoCD Sync hooks** (`useHelmHooks:false` +
+    `argocd.argoproj.io/hook: Sync`). The chart's Helm-hook default maps to PostSync,
+    which deadlocks: pods wait on migrations in their init container, migrations wait
+    on pods being healthy.
+  - **git-sync needs auth for a private DAG repo.** Anonymous HTTPS git-sync of a
+    private repo fails ("Repository not found") and keeps triggerer/dag-processor
+    unhealthy, which wedges the whole ArgoCD sync. Currently `dags.gitSync.enabled:
+    false` pending an SSH deploy key / public repo / PAT.
 - **cloudnativepg** — Postgres operator (`cnpg-system`). App DBs are `Cluster`
   CRs (e.g. `backstage/postgres.yaml`).
 - **harbor** — OCI registry at `harbor.bergtobias.com`. Internal pushes bypass
