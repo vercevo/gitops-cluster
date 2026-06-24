@@ -1,0 +1,151 @@
+# Airflow 3 (chart 1.22.x / appVersion 3.2.x). Auth is Authentik OIDC via the FAB
+# auth manager (the chart's default `[core] auth_manager`). Metadata DB is the CNPG
+# Cluster in postgres.yaml; bundled Postgres/Redis are disabled. Workers run as pods
+# (KubernetesExecutor) — no Celery/Redis. Secrets come from bootstrap/airflow-secret.sh.
+
+executor: KubernetesExecutor
+
+# Bundled subcharts off — we bring our own CNPG Postgres; KubernetesExecutor needs no Redis.
+postgresql:
+  enabled: false
+redis:
+  enabled: false
+
+# Trim components we don't run on a single node.
+statsd:
+  enabled: false
+
+# Metadata DB connection — secret has a 'connection' key (created by airflow-secret.sh):
+#   postgresql+psycopg2://airflow:<pw>@airflow-pg-rw.airflow.svc.cluster.local:5432/airflow
+data:
+  metadataSecretName: airflow-metadata
+
+# Airflow 3 signing keys. One bootstrap secret (airflow-keys) holds all three keys.
+fernetKeySecretName: airflow-keys      # key: fernet-key
+apiSecretKeySecretName: airflow-keys   # key: api-secret-key
+jwtSecretName: airflow-keys            # key: jwt-secret
+
+# Injected into all Airflow containers so webserver_config.py can read them.
+# `extraEnv` is a raw templated string (the typed `env` list rejects valueFrom).
+extraEnv: |
+  - name: AUTHENTIK_BASE_URL
+    value: https://authentik.bergtobias.com
+  - name: AIRFLOW_OIDC_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: airflow-oidc
+        key: client-id
+  - name: AIRFLOW_OIDC_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: airflow-oidc
+        key: client-secret
+
+# The api-server serves the UI in Airflow 3 (the old `webserver` service is gone).
+# The HTTPRoute (httproute.yaml) targets Service airflow-api-server:8080.
+apiServer:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+scheduler:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+triggerer:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+dagProcessor:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+workers:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# webserver_config.py is rendered into the airflow-config ConfigMap and mounted at
+# /opt/airflow/webserver_config.py in every Airflow pod (incl. api-server), where the
+# FAB auth manager reads it. Authentik redirect URI is /auth/oauth-authorized/authentik
+# (the /auth prefix is new in Airflow 3 — set it on the Authentik provider side).
+webserver:
+  webserverConfig: |
+    import os
+    from flask_appbuilder.security.manager import AUTH_OAUTH
+    from airflow.providers.fab.auth_manager.security_manager.override import (
+        FabAirflowSecurityManagerOverride,
+    )
+
+    AUTH_TYPE = AUTH_OAUTH
+
+    # New users are created on first login; their roles come from Authentik groups.
+    AUTH_USER_REGISTRATION = True
+    AUTH_USER_REGISTRATION_ROLE = "Public"   # no access until a group grants a role
+    AUTH_ROLES_SYNC_AT_LOGIN = True
+
+    # Map Authentik group names -> Airflow (FAB) roles.
+    AUTH_ROLES_MAPPING = {
+        "airflow-admins": ["Admin"],
+        "airflow-users": ["User"],
+    }
+
+    _BASE = os.environ["AUTHENTIK_BASE_URL"]
+
+    OAUTH_PROVIDERS = [
+        {
+            "name": "authentik",
+            "icon": "fa-key",
+            "token_key": "access_token",
+            "remote_app": {
+                "client_id": os.environ["AIRFLOW_OIDC_CLIENT_ID"],
+                "client_secret": os.environ["AIRFLOW_OIDC_CLIENT_SECRET"],
+                "server_metadata_url": _BASE
+                + "/application/o/airflow/.well-known/openid-configuration",
+                "client_kwargs": {"scope": "openid email profile"},
+            },
+        }
+    ]
+
+    class AuthentikSecurityManager(FabAirflowSecurityManagerOverride):
+        def get_oauth_user_info(self, provider, resp):
+            if provider == "authentik":
+                me = self.appbuilder.sm.oauth_remotes[provider].userinfo()
+                return {
+                    "username": me.get("preferred_username") or me.get("sub"),
+                    "email": me.get("email"),
+                    "first_name": me.get("given_name", me.get("name", "")),
+                    "last_name": me.get("family_name", ""),
+                    "role_keys": me.get("groups", []),
+                }
+            return {}
+
+    SECURITY_MANAGER_CLASS = AuthentikSecurityManager
+
+# DAGs are git-synced from a dedicated repo (pipeline code lives apart from infra).
+# If the repo is private, add `sshKeySecret: airflow-dags-git` and use a git@ URL.
+dags:
+  gitSync:
+    enabled: true
+    repo: https://github.com/vercevo/airflow-dags.git
+    branch: main
+    ref: main
+    subPath: dags
+    period: 30s

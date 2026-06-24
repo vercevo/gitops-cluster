@@ -153,11 +153,32 @@ TOKEN=$(python3 -c "import json;print(json.load(open('.secrets/vault-init.json')
 VAULT_TOKEN="$TOKEN" ./bootstrap/vault-configure.sh
 ```
 
-Per-component secret scripts (`github-app-secret.sh`, `minio-secret.sh`, …) are run as
-needed — see "Secrets" above and the component entries below.
+Per-component secret scripts (`github-app-secret.sh`, `minio-secret.sh`,
+`airflow-secret.sh`, …) are run as needed — see "Secrets" above and the component
+entries below.
+
+**Airflow rollout (one-time):**
+1. Create repo `vercevo/airflow-dags` with a `dags/` folder (at least one DAG).
+2. In Authentik, create an **OAuth2/OpenID provider** + application `airflow`.
+   Redirect URI: `https://airflow.bergtobias.com/auth/oauth-authorized/authentik`
+   (note the `/auth` prefix — Airflow 3). Create a group `airflow-admins` and add
+   yourself; ensure the `groups` claim is in the userinfo scope.
+3. `AIRFLOW_OIDC_CLIENT_ID=… AIRFLOW_OIDC_CLIENT_SECRET=… ./bootstrap/airflow-secret.sh`
+4. Add the proxied CNAME `airflow.bergtobias.com` → tunnel (see **DNS** above).
 
 ## Components
 
+- **airflow** — Apache Airflow 3 DAG orchestrator at `airflow.bergtobias.com`
+  (ns `airflow`). Official Helm chart (`apache-airflow/airflow`, multi-source app
+  + `platform/airflow/values.yaml`). `KubernetesExecutor` (tasks run as pods, no
+  Celery/Redis); metadata DB is a CNPG `Cluster` (`airflow-pg`). Login is
+  **Authentik OIDC** via the FAB auth manager (`webserver.webserverConfig`); the
+  UI is served by Service `airflow-api-server:8080` (Airflow 3 has no `webserver`
+  service). Authentik groups map to roles: `airflow-admins` → Admin,
+  `airflow-users` → User. DAGs are git-synced from `vercevo/airflow-dags`
+  (`dags/` subpath). Secrets via `bootstrap/airflow-secret.sh`. **Gotcha:** the
+  Airflow 3 OAuth callback is `/auth/oauth-authorized/authentik` (the `/auth`
+  prefix is new in 3.x — `/oauth-authorized/authentik` is the 2.x path).
 - **cloudnativepg** — Postgres operator (`cnpg-system`). App DBs are `Cluster`
   CRs (e.g. `backstage/postgres.yaml`).
 - **harbor** — OCI registry at `harbor.bergtobias.com`. Internal pushes bypass
