@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dagster
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    - repoURL: https://dagster-io.github.io/helm
+      chart: dagster
+      targetRevision: "1.13.*"
+      helm:
+        valueFiles:
+          - $values/applications/dagster/values.yaml
+    - repoURL: https://github.com/vercevo/gitops-cluster
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/vercevo/gitops-cluster
+      targetRevision: HEAD
+      path: applications/dagster
+      directory:
+        include: "{postgres.yaml,evidence.yaml,oauth2-proxy.yaml,httproute.yaml}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dagster
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

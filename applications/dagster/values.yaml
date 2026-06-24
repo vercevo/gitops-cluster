@@ -1,0 +1,81 @@
+# Dagster Helm chart values. Webserver + daemon + our GHCR code image, runs
+# launched as k8s Jobs (K8sRunLauncher). Metadata storage = CNPG dagster-pg;
+# the warehouse the assets write to = CNPG jaffle-pg (injected as PG* env).
+
+imagePullSecrets:
+  - name: ghcr-pull
+
+# ---- Our code location (gRPC server from the image CI publishes) -------------
+dagster-user-deployments:
+  enabled: true
+  deployments:
+    - name: etl-tutorial
+      image:
+        repository: ghcr.io/vercevo/elt-tutorial-dagster
+        tag: latest
+        pullPolicy: Always
+      dagsterApiGrpcArgs:
+        - "-m"
+        - "etl_tutorial.definitions"
+      port: 4000
+      # Propagate this pod's image/env/config onto every launched run pod, so
+      # runs reach the warehouse with the same PG* env.
+      includeConfigInLaunchedRuns:
+        enabled: true
+      imagePullSecrets:
+        - name: ghcr-pull
+      env:
+        - name: PGHOST
+          value: jaffle-pg-rw
+        - name: PGPORT
+          value: "5432"
+        - name: PGDATABASE
+          value: jaffle
+        - name: PGUSER
+          value: jaffle
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: jaffle-pg-user
+              key: password
+
+# ---- Webserver (UI) — fronted by oauth2-proxy, so ClusterIP only -------------
+dagsterWebserver:
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 80
+
+# ---- Daemon (schedules/sensors/run queue) ------------------------------------
+dagsterDaemon:
+  enabled: true
+  runCoordinator:
+    enabled: true
+    type: QueuedRunCoordinator
+    config:
+      queuedRunCoordinator:
+        maxConcurrentRuns: 5
+
+# ---- Run launcher: each run is its own k8s Job ------------------------------
+runLauncher:
+  type: K8sRunLauncher
+  config:
+    k8sRunLauncher:
+      imagePullPolicy: Always
+      loadInclusterConfig: true
+      runK8sConfig:
+        podSpecConfig:
+          imagePullSecrets:
+            - name: ghcr-pull
+
+# ---- Metadata storage: external CNPG, not the chart's bundled Postgres -------
+generatePostgresqlPasswordSecret: false
+postgresql:
+  enabled: false
+  postgresqlHost: dagster-pg-rw
+  postgresqlUsername: dagster
+  postgresqlDatabase: dagster
+  # Secret must carry the key `postgresql-password` (created by the bootstrap script).
+  postgresqlSecretName: dagster-pg-user
+  service:
+    port: 5432

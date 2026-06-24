@@ -1,0 +1,58 @@
+# Auth gate in front of the Dagster UI (Dagster OSS has no built-in auth).
+# oauth2-proxy authenticates against Authentik OIDC, then reverse-proxies the
+# webserver. The dagster HTTPRoute points here, not at the webserver directly.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth2-proxy
+  namespace: dagster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth2-proxy
+  template:
+    metadata:
+      labels:
+        app: oauth2-proxy
+    spec:
+      containers:
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+          args:
+            - --provider=oidc
+            - --oidc-issuer-url=https://authentik.bergtobias.com/application/o/dagster/
+            - --upstream=http://dagster-webserver:80
+            - --http-address=0.0.0.0:4180
+            - --redirect-url=https://dagster.bergtobias.com/oauth2/callback
+            - --email-domain=*
+            - --scope=openid profile email
+            - --skip-provider-button=true
+            - --cookie-secure=true
+            - --reverse-proxy=true
+          # CLIENT_ID / CLIENT_SECRET / COOKIE_SECRET come from the secret created
+          # by bootstrap/dagster-secret.sh (oauth2-proxy reads OAUTH2_PROXY_* env).
+          envFrom:
+            - secretRef:
+                name: dagster-oauth2-proxy
+          ports:
+            - containerPort: 4180
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth2-proxy
+  namespace: dagster
+spec:
+  selector:
+    app: oauth2-proxy
+  ports:
+    - port: 80
+      targetPort: 4180

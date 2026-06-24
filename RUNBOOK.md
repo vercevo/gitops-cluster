@@ -166,6 +166,15 @@ entries below.
 3. `AIRFLOW_OIDC_CLIENT_ID=… AIRFLOW_OIDC_CLIENT_SECRET=… ./bootstrap/airflow-secret.sh`
 4. Add the proxied CNAME `airflow.bergtobias.com` → tunnel (see **DNS** above).
 
+**Dagster rollout (one-time):**
+1. Code + Evidence images publish to GHCR from `vercevo/elt-tutorial`
+   (`.github/workflows/build-images.yml`). Confirm both packages are green.
+2. In Authentik, create an **OAuth2/OpenID provider** + application `dagster`
+   (app slug `dagster`). Redirect URI: `https://dagster.bergtobias.com/oauth2/callback`.
+3. `DAGSTER_OIDC_CLIENT_ID=… DAGSTER_OIDC_CLIENT_SECRET=… ./bootstrap/dagster-secret.sh`
+4. Add proxied CNAMEs `dagster.bergtobias.com` and `jaffle.bergtobias.com` → tunnel
+   (see **DNS** above).
+
 ## Components
 
 - **airflow** — Apache Airflow 3 DAG orchestrator at `airflow.bergtobias.com`
@@ -194,6 +203,25 @@ entries below.
     false` pending an SSH deploy key / public repo / PAT.
 - **cloudnativepg** — Postgres operator (`cnpg-system`). App DBs are `Cluster`
   CRs (e.g. `backstage/postgres.yaml`).
+- **dagster** — Dagster orchestrator for the `elt-tutorial` ELT (ns `dagster`),
+  replacing Airflow. Official Helm chart (`dagster/dagster`, multi-source app +
+  `applications/dagster/values.yaml`). `K8sRunLauncher` (each run is a Job pod);
+  metadata DB is CNPG `dagster-pg`, the analytics **warehouse** is CNPG `jaffle-pg`
+  (db `jaffle`, schema `main`). Code-location image
+  `ghcr.io/vercevo/elt-tutorial-dagster` (`-m etl_tutorial.definitions`), built by the
+  app repo CI. **Evidence** dashboard (`ghcr.io/vercevo/elt-tutorial-evidence`) at
+  `jaffle.bergtobias.com` reads the warehouse. The UI at `dagster.bergtobias.com` has
+  **no native auth** — it sits behind **oauth2-proxy** → Authentik OIDC (the HTTPRoute
+  targets `oauth2-proxy`, not the webserver). Secrets via `bootstrap/dagster-secret.sh`
+  (incl. a `ghcr-pull` copied from the backstage ns, and the metadata secret's extra
+  `postgresql-password` key the chart requires). **Gotchas:**
+  - **Warehouse is Postgres, not DuckDB.** The tutorial ships DuckDB (single-file,
+    single-writer) which can't be shared across run pods; assets/dbt/Evidence were
+    repointed at CNPG `jaffle-pg`.
+  - **`includeConfigInLaunchedRuns: true`** so launched run Jobs inherit the code
+    pod's image + PG* env — otherwise runs can't reach the warehouse.
+  - **Evidence builds at pod start**, but the warehouse is empty until the first
+    materialization: `kubectl rollout restart deploy/evidence -n dagster` after a run.
 - **harbor** — OCI registry at `harbor.bergtobias.com`. Internal pushes bypass
   Cloudflare's 100MB limit via a CoreDNS rewrite (`platform/coredns`) that
   points `harbor.bergtobias.com` at `traefik.traefik.svc.cluster.local`.

@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evidence
+  namespace: dagster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: evidence
+  template:
+    metadata:
+      labels:
+        app: evidence
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: evidence
+          image: ghcr.io/vercevo/elt-tutorial-evidence:latest
+          imagePullPolicy: Always
+          # Tolerant build: the warehouse may be empty before the first Dagster
+          # run. Restart this deployment after materializing to refresh the site.
+          command: ["sh", "-c"]
+          args:
+            - "npm run sources || true; npm run build || true; npx evidence preview --host 0.0.0.0 --port 3000"
+          ports:
+            - containerPort: 3000
+          env:
+            - name: EVIDENCE_SOURCE__jaffle_platform__host
+              value: jaffle-pg-rw
+            - name: EVIDENCE_SOURCE__jaffle_platform__port
+              value: "5432"
+            - name: EVIDENCE_SOURCE__jaffle_platform__database
+              value: jaffle
+            - name: EVIDENCE_SOURCE__jaffle_platform__user
+              value: jaffle
+            - name: EVIDENCE_SOURCE__jaffle_platform__schema
+              value: main
+            - name: EVIDENCE_SOURCE__jaffle_platform__password
+              valueFrom:
+                secretKeyRef:
+                  name: jaffle-pg-user
+                  key: password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: evidence
+  namespace: dagster
+spec:
+  selector:
+    app: evidence
+  ports:
+    - port: 80
+      targetPort: 3000
