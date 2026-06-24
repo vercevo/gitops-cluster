@@ -15,6 +15,25 @@ redis:
 statsd:
   enabled: false
 
+# DB migration + create-user jobs. The chart defaults these to Helm hooks
+# (post-install/post-upgrade), which ArgoCD maps to PostSync — but PostSync only
+# runs after pods are Healthy, and the pods block in their wait-for-airflow-migrations
+# init container until migrations exist. Deadlock. Fix: make them ordinary Sync-phase
+# resources via ArgoCD hooks; BeforeHookCreation lets them re-run on later syncs
+# without hitting the immutable-Job error.
+migrateDatabaseJob:
+  useHelmHooks: false
+  applyCustomEnv: false
+  jobAnnotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+createUserJob:
+  useHelmHooks: false
+  applyCustomEnv: false
+  jobAnnotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+
 # Metadata DB connection — secret has a 'connection' key (created by airflow-secret.sh):
 #   postgresql+psycopg2://airflow:<pw>@airflow-pg-rw.airflow.svc.cluster.local:5432/airflow
 data:
