@@ -45,10 +45,11 @@ spec:
           resources:
             requests:
               cpu: 100m
-              memory: 256Mi
+              memory: 512Mi
             limits:
               cpu: 1000m
-              memory: 1Gi
+              # Vite/SvelteKit `evidence build` is memory-hungry; 1Gi OOM-killed it.
+              memory: 2Gi
 ---
 apiVersion: v1
 kind: Service
