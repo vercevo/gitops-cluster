@@ -22,7 +22,7 @@ spec:
           args:
             - --provider=oidc
             - --oidc-issuer-url=https://authentik.bergtobias.com/application/o/dagster/
-            - --upstream=http://dagster-webserver:80
+            - --upstream=http://dagster-dagster-webserver:80
             - --http-address=0.0.0.0:4180
             - --redirect-url=https://dagster.bergtobias.com/oauth2/callback
             - --email-domain=*
