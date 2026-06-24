@@ -60,8 +60,15 @@ extraEnv: |
         name: airflow-oidc
         key: client-secret
 
-# The api-server serves the UI in Airflow 3 (the old `webserver` service is gone).
-# The HTTPRoute (httproute.yaml) targets Service airflow-api-server:8080.
+# The api-server serves the UI AND runs the FAB auth manager in Airflow 3 (the old
+# `webserver` service is gone). The HTTPRoute targets Service airflow-api-server:8080.
+#
+# IMPORTANT (Airflow 3): the FAB OAuth config must live in `apiServer.apiServerConfig`
+# — that is the ONLY config the chart mounts into the api-server as
+# /opt/airflow/webserver_config.py. The legacy `webserver.webserverConfig` is mounted
+# into scheduler/triggerer/etc but NOT the api-server, so OAuth there silently no-ops
+# (FAB falls back to the DB username/password form). auth_manager=FabAuthManager is the
+# chart default. Redirect URI: https://airflow.bergtobias.com/auth/oauth-authorized/authentik
 apiServer:
   replicas: 1
   resources:
@@ -71,42 +78,7 @@ apiServer:
     limits:
       cpu: "1"
       memory: 1Gi
-
-scheduler:
-  replicas: 1
-  resources:
-    requests:
-      cpu: 200m
-      memory: 512Mi
-    limits:
-      cpu: "1"
-      memory: 1Gi
-
-triggerer:
-  replicas: 1
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-
-dagProcessor:
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-
-workers:
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-
-# webserver_config.py is rendered into the airflow-config ConfigMap and mounted at
-# /opt/airflow/webserver_config.py in every Airflow pod (incl. api-server), where the
-# FAB auth manager reads it. Authentik redirect URI is /auth/oauth-authorized/authentik
-# (the /auth prefix is new in Airflow 3 — set it on the Authentik provider side).
-webserver:
-  webserverConfig: |
+  apiServerConfig: |
     import os
     from flask_appbuilder.security.manager import AUTH_OAUTH
     from airflow.providers.fab.auth_manager.security_manager.override import (
@@ -138,7 +110,7 @@ webserver:
                 "client_secret": os.environ["AIRFLOW_OIDC_CLIENT_SECRET"],
                 "server_metadata_url": _BASE
                 + "/application/o/airflow/.well-known/openid-configuration",
-                "client_kwargs": {"scope": "openid email profile"},
+                "client_kwargs": {"scope": "openid email profile groups"},
             },
         }
     ]
@@ -157,6 +129,35 @@ webserver:
             return {}
 
     SECURITY_MANAGER_CLASS = AuthentikSecurityManager
+
+scheduler:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+triggerer:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+dagProcessor:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+workers:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
 
 # DAGs are git-synced from a dedicated repo (pipeline code lives apart from infra).
 # If the repo is private, add `sshKeySecret: airflow-dags-git` and use a git@ URL.
