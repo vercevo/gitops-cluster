@@ -320,7 +320,20 @@ are run as needed — see "Secrets" above and the component entries below.
   Cloudflare's 100MB limit via a CoreDNS rewrite (`platform/coredns`) that
   points `harbor.bergtobias.com` at `traefik.traefik.svc.cluster.local`.
 - **authentik** — SSO at `authentik.bergtobias.com`. Admin ops via
-  `kubectl exec -n authentik deploy/authentik-server -- ak shell`.
+  `kubectl exec -n authentik deploy/authentik-server -- ak shell`. **Blueprints
+  (config-as-code):** custom blueprints live in
+  `platform/authentik/blueprints-configmap.yaml` (ConfigMap; each `.yaml` key is a
+  blueprint), mounted into the pods via `blueprints.configMaps` and auto-applied by
+  the **worker** (mount path `/blueprints/mounted/cm-authentik-blueprints/`).
+  Discovery runs periodically; force it with
+  `ak shell -c 'from authentik.blueprints.v1.tasks import blueprints_discovery; blueprints_discovery.delay()'`
+  on the **worker**, then check `BlueprintInstance` status. Currently manages the
+  `Grafana Admins` group. **OIDC providers/apps are still created imperatively via
+  `ak shell`** (grafana, minio, dagster, argocd, …) — to convert one to a blueprint,
+  declare the `OAuth2Provider` + `Application`, and set the **client secret with the
+  `!Env <VAR>` tag** (inject `<VAR>` into the authentik pods from a k8s Secret) so the
+  secret never lands in the in-git ConfigMap. Match the existing `client_id` and flows
+  exactly or you'll break live login.
 - **minio** — S3 object storage. Operator (`minio-operator`) + Tenant `techdocs`
   (`minio` ns, SNSD). Buckets: `techdocs` (Backstage), `loki`, `tempo`. S3 API
   external at `s3.bergtobias.com`; in-cluster at
