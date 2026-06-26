@@ -186,9 +186,16 @@ VAULT_TOKEN="$TOKEN" ./bootstrap/vault-configure.sh
    auto-create buckets added to an existing tenant — create it once with `mc`
    (see the loki+tempo gotcha below). No DNS/HTTPRoute (internal-only).
 
+**MinIO Console OIDC (one-time):**
+1. In Authentik, create an **OAuth2/OpenID provider** + application `minio`
+   (app slug `minio`). Redirect URI: `https://minio.bergtobias.com/oauth_callback`.
+2. `MINIO_OIDC_CLIENT_ID=… MINIO_OIDC_CLIENT_SECRET=… ./bootstrap/minio-oidc-secret.sh`
+   (injects OIDC into `config.env` and restarts the tenant pod).
+3. DNS: nothing to do — the `*.bergtobias.com` wildcard resolves `minio.bergtobias.com`.
+
 Per-component secret scripts (`github-app-secret.sh`, `minio-secret.sh`,
-`grafana-secret.sh`, `loki-secret.sh`, `tempo-secret.sh`, …) are run as needed —
-see "Secrets" above and the component entries below.
+`grafana-secret.sh`, `loki-secret.sh`, `tempo-secret.sh`, `minio-oidc-secret.sh`, …)
+are run as needed — see "Secrets" above and the component entries below.
 
 **Dagster rollout (one-time):**
 1. Code + Evidence images publish to GHCR from `vercevo/elt-tutorial`
@@ -299,12 +306,23 @@ see "Secrets" above and the component entries below.
   points `harbor.bergtobias.com` at `traefik.traefik.svc.cluster.local`.
 - **authentik** — SSO at `authentik.bergtobias.com`. Admin ops via
   `kubectl exec -n authentik deploy/authentik-server -- ak shell`.
-- **minio** — S3 object storage for Backstage TechDocs. Operator
-  (`minio-operator`) + Tenant `techdocs` (`minio` ns, SNSD, bucket `techdocs`).
-  S3 API external at `s3.bergtobias.com`; in-cluster at
+- **minio** — S3 object storage. Operator (`minio-operator`) + Tenant `techdocs`
+  (`minio` ns, SNSD). Buckets: `techdocs` (Backstage), `loki`, `tempo`. S3 API
+  external at `s3.bergtobias.com`; in-cluster at
   `http://minio.minio.svc.cluster.local` (port 80). Root creds in
   `minio-tenant-config` (ns minio); Backstage read creds in `minio-techdocs`
-  (ns backstage). See `bootstrap/minio-secret.sh`.
+  (ns backstage). See `bootstrap/minio-secret.sh`. **Console** (admin UI) at
+  `minio.bergtobias.com` (`techdocs-console:9090`) with **Authentik OIDC** login,
+  role-policy mode (`MINIO_IDENTITY_OPENID_ROLE_POLICY=consoleAdmin` — any user who
+  passes the Authentik `minio` app gets full admin). See `bootstrap/minio-oidc-secret.sh`.
+  **Gotchas:**
+  - **The operator does NOT auto-create buckets added to an existing tenant**, and
+    **operator v7.1.1 does not render Tenant `spec.env` into the StatefulSet.** So:
+    new buckets are created once with `mc` (see the loki/tempo entry), and **OIDC env
+    is injected into the `config.env` secret** (which MinIO reliably sources), not via
+    `spec.env`. `minio-oidc-secret.sh` patches `config.env` and restarts the pod.
+  - **Re-running `minio-secret.sh` rewrites `config.env` and drops the OIDC lines** —
+    re-run `minio-oidc-secret.sh` afterwards.
 
 ## Quick checks
 
