@@ -13,32 +13,13 @@ spec:
   # Homelab: TLS is terminated at Traefik/Cloudflare, so the tenant serves
   # plain HTTP internally. Disable the operator's self-signed cert.
   requestAutoCert: false
-  # Console (admin UI) login via Authentik OIDC. Role-policy mode: every user who
-  # authenticates through the Authentik `minio` app gets the built-in `consoleAdmin`
-  # policy — access is gated by Authentik, not a custom `policy` claim. Client
-  # id/secret come from the `minio-oidc` secret (bootstrap/minio-oidc-secret.sh).
-  env:
-    - name: MINIO_IDENTITY_OPENID_CONFIG_URL
-      value: https://authentik.bergtobias.com/application/o/minio/.well-known/openid-configuration
-    - name: MINIO_IDENTITY_OPENID_CLIENT_ID
-      valueFrom:
-        secretKeyRef:
-          name: minio-oidc
-          key: client-id
-    - name: MINIO_IDENTITY_OPENID_CLIENT_SECRET
-      valueFrom:
-        secretKeyRef:
-          name: minio-oidc
-          key: client-secret
-    - name: MINIO_IDENTITY_OPENID_SCOPES
-      value: "openid,profile,email"
-    - name: MINIO_IDENTITY_OPENID_ROLE_POLICY
-      value: consoleAdmin
-    - name: MINIO_IDENTITY_OPENID_DISPLAY_NAME
-      value: "Log in with Authentik"
-    # External console URL — MinIO derives the OIDC callback as <url>/oauth_callback.
-    - name: MINIO_BROWSER_REDIRECT_URL
-      value: https://minio.bergtobias.com
+  # Console (admin UI) login uses Authentik OIDC in role-policy mode (every user
+  # who authenticates through the Authentik `minio` app gets the built-in
+  # `consoleAdmin` policy; access is gated by Authentik). The OIDC settings are
+  # injected via the `config.env` secret (the same one that holds the root creds),
+  # NOT here — operator v7.1.1 does not render Tenant `spec.env` into the
+  # StatefulSet. See bootstrap/minio-oidc-secret.sh. The console route is in
+  # console-httproute.yaml.
   pools:
     - name: pool-0
       # Single-node single-drive (SNSD) — sufficient for static TechDocs HTML.
