@@ -50,6 +50,20 @@ metrics:
     serviceMonitor:
       enabled: true
 
+# Emit OTLP traces for every request through the gateway -> OpenTelemetry Collector
+# -> Tempo (viewable in Grafana). Full sampling is fine for low homelab traffic;
+# lower sampleRate (0.0-1.0) if volume grows. addInternals stays false so Traefik's
+# own ping/dashboard requests aren't traced.
+tracing:
+  serviceName: traefik
+  sampleRate: 1.0
+  otlp:
+    enabled: true
+    grpc:
+      enabled: true
+      endpoint: opentelemetry-collector.opentelemetry.svc.cluster.local:4317
+      insecure: true
+
 # Dashboard disabled by default — expose intentionally if needed
 ingressRoute:
   dashboard:
