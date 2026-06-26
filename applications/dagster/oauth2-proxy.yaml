@@ -7,7 +7,9 @@ metadata:
   name: oauth2-proxy
   namespace: dagster
 spec:
-  replicas: 1
+  # replicas 0: nothing to front while the Dagster webserver is scaled to 0
+  # (node too small to run Dagster + observability; see application.yaml).
+  replicas: 0
   selector:
     matchLabels:
       app: oauth2-proxy

@@ -11,8 +11,9 @@ global:
   postgresqlSecretName: dagster-pg-user
 
 # ---- Our code location (gRPC server from the image CI publishes) -------------
+# DISABLED: node too small to run Dagster + observability (see application.yaml).
 dagster-user-deployments:
-  enabled: true
+  enabled: false
   deployments:
     - name: etl-tutorial
       image:
@@ -45,15 +46,17 @@ dagster-user-deployments:
               key: password
 
 # ---- Webserver (UI) — fronted by oauth2-proxy, so ClusterIP only -------------
+# Scaled to 0: node too small to run Dagster + observability (see application.yaml).
 dagsterWebserver:
-  replicaCount: 1
+  replicaCount: 0
   service:
     type: ClusterIP
     port: 80
 
 # ---- Daemon (schedules/sensors/run queue) ------------------------------------
+# DISABLED: node too small to run Dagster + observability (see application.yaml).
 dagsterDaemon:
-  enabled: true
+  enabled: false
   runCoordinator:
     enabled: true
     type: QueuedRunCoordinator

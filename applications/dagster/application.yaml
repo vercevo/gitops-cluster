@@ -28,12 +28,16 @@ spec:
     server: https://kubernetes.default.svc
     namespace: dagster
   syncPolicy:
-    # Auto-sync intentionally disabled: this single 7.6Gi node cannot run Dagster
-    # (esp. the memory-hungry Evidence build, which was OOM-crash-looping) and the
-    # kube-prometheus-stack observability stack at the same time. Disabling auto-sync
-    # lets the Dagster compute be scaled to 0 without selfHeal reverting it; the
-    # CNPG Postgres data (jaffle-pg/dagster-pg) is left running and untouched.
-    # Re-enable (restore the `automated` block) once the node has more RAM.
+    # Dagster COMPUTE is zeroed in git (values.yaml: webserver replicaCount 0, daemon +
+    # user-deployments disabled; evidence.yaml + oauth2-proxy.yaml replicas: 0) because
+    # this single 7.6Gi node cannot run Dagster — especially the OOM-crash-looping
+    # Evidence build — alongside the kube-prometheus-stack observability stack. selfHeal
+    # therefore KEEPS the compute at zero. The CNPG Postgres DATA (jaffle-pg/dagster-pg,
+    # in postgres.yaml) is left running and untouched. To re-enable Dagster once the node
+    # has more RAM, restore the replica counts / enabled flags.
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

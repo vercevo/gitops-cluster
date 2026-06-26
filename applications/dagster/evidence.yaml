@@ -3,8 +3,10 @@ kind: Deployment
 metadata:
   name: evidence
   namespace: dagster
+  # replicas 0: node too small to run Dagster + observability (see application.yaml).
+  # This OOM-crash-looped (271 restarts) during the build under memory pressure.
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: evidence
@@ -27,6 +29,10 @@ spec:
           ports:
             - containerPort: 3000
           env:
+            # Cap V8 heap so `evidence build` GCs instead of growing into the
+            # container memory limit and getting OOMKilled (exit 137).
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=1536"
             - name: EVIDENCE_SOURCE__jaffle_platform__host
               value: jaffle-pg-rw
             - name: EVIDENCE_SOURCE__jaffle_platform__port
