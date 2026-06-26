@@ -23,7 +23,7 @@ spec:
       targetRevision: HEAD
       path: platform/authentik
       directory:
-        include: "postgres-redis.yaml"
+        include: "{postgres-redis.yaml,blueprints-configmap.yaml}"
   destination:
     server: https://kubernetes.default.svc
     namespace: authentik

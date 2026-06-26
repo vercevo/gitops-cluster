@@ -30,3 +30,9 @@ redis:
 server:
   ingress:
     enabled: false
+
+# Mount custom blueprints (config-as-code) from the authentik-blueprints ConfigMap
+# (platform/authentik/blueprints-configmap.yaml). Authentik auto-applies them.
+blueprints:
+  configMaps:
+    - authentik-blueprints

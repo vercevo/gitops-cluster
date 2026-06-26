@@ -1,0 +1,28 @@
+# Custom Authentik blueprints, mounted into the server+worker pods via
+# values.yaml `blueprints.configMaps: [authentik-blueprints]`. Authentik discovers
+# every `.yaml` key here and applies it declaratively (GitOps config-as-code,
+# replacing one-off `ak shell` edits).
+#
+# Secrets note: do NOT put client_secrets in here (this ConfigMap is in git).
+# For OAuth2 providers, set the secret via the `!Env <VAR>` blueprint tag and inject
+# <VAR> into the Authentik pods from a k8s Secret (see RUNBOOK "Authentik blueprints").
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authentik-blueprints
+  namespace: authentik
+data:
+  gitops-groups.yaml: |
+    # Groups managed declaratively. Adopts the existing "Grafana Admins" group
+    # (previously created via ak shell) — matched by name, no secrets involved.
+    version: 1
+    metadata:
+      name: gitops-groups
+      labels:
+        blueprints.goauthentik.io/description: "Cluster groups (GitOps-managed)"
+    entries:
+      - model: authentik_core.group
+        identifiers:
+          name: Grafana Admins
+        attrs:
+          name: Grafana Admins
