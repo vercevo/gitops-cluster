@@ -43,6 +43,12 @@ logs:
 metrics:
   prometheus:
     enabled: true
+    # Dedicated metrics service + ServiceMonitor so kube-prometheus-stack scrapes
+    # Traefik. The ServiceMonitor CRD ships with that chart (sync-wave 1).
+    service:
+      enabled: true
+    serviceMonitor:
+      enabled: true
 
 # Dashboard disabled by default — expose intentionally if needed
 ingressRoute:

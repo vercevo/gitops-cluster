@@ -153,8 +153,17 @@ TOKEN=$(python3 -c "import json;print(json.load(open('.secrets/vault-init.json')
 VAULT_TOKEN="$TOKEN" ./bootstrap/vault-configure.sh
 ```
 
+**Grafana rollout (one-time):**
+1. In Authentik, create an **OAuth2/OpenID provider** + application `grafana`
+   (app slug `grafana`). Redirect URI:
+   `https://grafana.bergtobias.com/login/generic_oauth`. Optionally create a
+   `Grafana Admins` group and add yourself (maps to Grafana Admin; others Viewer).
+2. `GRAFANA_OIDC_CLIENT_ID=… GRAFANA_OIDC_CLIENT_SECRET=… ./bootstrap/grafana-secret.sh`
+   (prints a break-glass local `admin` password; store it).
+3. Add a proxied CNAME `grafana.bergtobias.com` → tunnel (see **DNS** above).
+
 Per-component secret scripts (`github-app-secret.sh`, `minio-secret.sh`,
-`airflow-secret.sh`, …) are run as needed — see "Secrets" above and the component
+`grafana-secret.sh`, …) are run as needed — see "Secrets" above and the component
 entries below.
 
 **Dagster rollout (one-time):**
@@ -169,7 +178,26 @@ entries below.
 ## Components
 
 - **cloudnativepg** — Postgres operator (`cnpg-system`). App DBs are `Cluster`
-  CRs (e.g. `backstage/postgres.yaml`).
+  CRs (e.g. `backstage/postgres.yaml`). Each `Cluster` opts into metrics with
+  `spec.monitoring.enablePodMonitor: true` (scraped by kube-prometheus-stack).
+- **kube-prometheus-stack** — observability stack (ns `monitoring`): Prometheus
+  Operator + Prometheus + Grafana + node-exporter + kube-state-metrics. Helm
+  multi-source app (`prometheus-community/kube-prometheus-stack` +
+  `platform/kube-prometheus-stack/values.yaml`), **sync-wave 1** so the
+  ServiceMonitor/PodMonitor/PrometheusRule CRDs exist before app-level monitors.
+  **Grafana** at `grafana.bergtobias.com` via **native Authentik OIDC**
+  (`generic_oauth`, not oauth2-proxy); the `Grafana Admins` Authentik group maps
+  to admin, else Viewer. Secret via `bootstrap/grafana-secret.sh`. **Scope is
+  metrics + dashboards only** — Alertmanager is disabled and logs (Loki/Alloy on
+  MinIO S3) and traces (Tempo) are deferred. **Gotchas:**
+  - **`*SelectorNilUsesHelmValues: false`** (service/pod/rule/probe/scrapeConfig)
+    in values — otherwise Prometheus only scrapes monitors carrying the chart's
+    release label and silently ignores app-namespace ones.
+  - **k3s control-plane targets disabled** (`kubeScheduler`/`kubeControllerManager`/
+    `kubeEtcd`/`kubeProxy` `enabled: false`) — k3s bundles them into one binary, so
+    they're not separately scrapable and would show as permanently "down".
+  - **Prometheus TSDB is a local-path PVC** (15d / 18GiB), not S3. S3/MinIO only
+    enters the picture with Loki in the deferred logs phase.
 - **dagster** — Dagster orchestrator for the `elt-tutorial` ELT (ns `dagster`),
   replacing Airflow. Official Helm chart (`dagster/dagster`, multi-source app +
   `applications/dagster/values.yaml`). `K8sRunLauncher` (each run is a Job pod);

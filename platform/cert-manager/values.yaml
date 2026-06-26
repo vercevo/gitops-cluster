@@ -6,4 +6,4 @@ replicaCount: 1
 prometheus:
   enabled: true
   servicemonitor:
-    enabled: false  # set true when prometheus-operator is installed
+    enabled: true   # prometheus-operator (kube-prometheus-stack) is installed

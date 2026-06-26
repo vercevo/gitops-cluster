@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  annotations:
+    # Wave 1: installs the Prometheus Operator CRDs (ServiceMonitor/PodMonitor/
+    # PrometheusRule) that later app-level monitors reference.
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: "87.*"
+      helm:
+        valueFiles:
+          - $values/platform/kube-prometheus-stack/values.yaml
+    - repoURL: https://github.com/vercevo/gitops-cluster
+      targetRevision: HEAD
+      ref: values
+    - repoURL: https://github.com/vercevo/gitops-cluster
+      targetRevision: HEAD
+      path: platform/kube-prometheus-stack
+      directory:
+        include: "{httproute.yaml}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # The chart's CRDs exceed the annotation size limit for client-side apply.
+      - ServerSideApply=true

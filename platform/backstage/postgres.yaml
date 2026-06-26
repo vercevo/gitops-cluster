@@ -6,6 +6,9 @@ metadata:
 spec:
   instances: 1
   imageName: ghcr.io/cloudnative-pg/postgresql:15
+  # Expose CNPG metrics to Prometheus (PodMonitor CRD from kube-prometheus-stack).
+  monitoring:
+    enablePodMonitor: true
   storage:
     size: 10Gi
   managed:

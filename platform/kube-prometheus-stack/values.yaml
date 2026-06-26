@@ -1,0 +1,108 @@
+# kube-prometheus-stack — single-node k3s homelab sizing.
+# Scope: metrics + dashboards. Logs (Loki) and alerting (Alertmanager) are
+# deliberately deferred — see RUNBOOK and the observability plan.
+
+# --- Alerting deferred this phase: keep Alertmanager off to save RAM. ---
+alertmanager:
+  enabled: false
+
+# --- k3s runs the control plane in a single binary, so these components are
+# NOT separately scrapable. Disabling them avoids permanently-"down" targets. ---
+kubeScheduler:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    # CRITICAL: by default Prometheus only selects monitors/rules carrying this
+    # chart's release label and silently ignores ones in app namespaces. Setting
+    # these to false makes it watch ServiceMonitors/PodMonitors/PrometheusRules
+    # cluster-wide — required for the app-level instrumentation to work.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    scrapeConfigSelectorNilUsesHelmValues: false
+
+    # Bounded local TSDB retention (S3 is a Phase 2 / Loki concern, not Prometheus).
+    retention: 15d
+    retentionSize: "18GiB"
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        memory: 1536Mi
+
+grafana:
+  defaultDashboardsEnabled: true
+
+  # TLS terminates at Cloudflare/Traefik; expose plain HTTP. HTTPRoute (not the
+  # chart ingress) publishes grafana.bergtobias.com.
+  service:
+    port: 80
+  ingress:
+    enabled: false
+
+  persistence:
+    enabled: true
+    storageClassName: local-path
+    size: 2Gi
+
+  # CLIENT_ID / CLIENT_SECRET / admin password come from the `grafana-oidc`
+  # secret created by bootstrap/grafana-secret.sh (Grafana reads GF_* env).
+  envFromSecret: grafana-oidc
+
+  grafana.ini:
+    server:
+      root_url: https://grafana.bergtobias.com
+    # Login form stays enabled so the local `admin` account is a break-glass path
+    # alongside the Authentik OIDC button.
+    "auth.generic_oauth":
+      enabled: true
+      name: Authentik
+      allow_sign_up: true
+      scopes: "openid profile email"
+      auth_url: https://authentik.bergtobias.com/application/o/grafana/authorize/
+      token_url: https://authentik.bergtobias.com/application/o/grafana/token/
+      api_url: https://authentik.bergtobias.com/application/o/grafana/userinfo/
+      # Map an Authentik group named "Grafana Admins" to admin; everyone else Viewer.
+      role_attribute_path: "contains(groups, 'Grafana Admins') && 'Admin' || 'Viewer'"
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+# Cluster-state + node metrics (chart defaults keep these on; pinned here for clarity).
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      memory: 64Mi

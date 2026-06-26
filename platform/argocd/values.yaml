@@ -1,11 +1,32 @@
 global:
   domain: argocd.bergtobias.com
 
+# Per-component metrics + ServiceMonitor (CRD from kube-prometheus-stack).
+controller:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+repoServer:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+applicationSet:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
 server:
   ingress:
     enabled: false
   extraArgs:
     - --insecure
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
 
 configs:
   params:

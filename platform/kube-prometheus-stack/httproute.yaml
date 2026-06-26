@@ -1,0 +1,30 @@
+# Grafana UI. Authentik OIDC is native (Grafana generic_oauth), so the route
+# points straight at the Grafana service — no oauth2-proxy in front.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana
+  namespace: monitoring
+  annotations:
+    external-dns.alpha.kubernetes.io/managed: "true"
+    external-dns.alpha.kubernetes.io/hostname: grafana.bergtobias.com
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: main
+      namespace: traefik
+      sectionName: websecure
+  hostnames:
+    - grafana.bergtobias.com
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: kube-prometheus-stack-grafana
+          port: 80
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
