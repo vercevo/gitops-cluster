@@ -114,12 +114,35 @@ Verify a brand-new host routes (expect a Traefik **404**, served by `cloudflare`
   A-record to the private node IP `192.168.10.10`, which Cloudflare rejects (`error 9003`);
   it is effectively **unused for ingress** and could be retired.
 
-## Secrets — bootstrap, not GitOps
+## Secrets — SOPS (migrating) + bootstrap scripts (legacy)
 
-Credentials are **not** in git. They're created by `bootstrap/*.sh` scripts
-(e.g. `github-app-secret.sh`, `cloudflare-secret.sh`, `minio-secret.sh`) using
-`kubectl create secret`. Re-run a script to (re)create its secret. Namespaces
-must exist before the secret; the scripts handle that.
+Two mechanisms, mid-migration from the second to the first:
+
+**SOPS (the target).** Secrets live **encrypted in git** as `SopsSecret` CRs under
+`platform/secrets/*.sops.yaml`; the `sops-secrets-operator` decrypts them into real
+k8s Secrets. `.sops.yaml` holds the **public** age recipient (safe in git); the
+**private** key is the single bootstrap secret — `.secrets/sops-age.key`
+(git-ignored, installed via `bootstrap/sops-age-secret.sh`). **BACK UP that key —
+lose it and every `*.sops.yaml` is unreadable.** Encrypt/edit with the `sops` CLI
+(`sops -e -i file.sops.yaml` / `sops file.sops.yaml`). Migrated so far: `grafana-oidc`.
+
+To add or migrate a secret:
+```bash
+# build a SopsSecret (stringData = the values), encrypt, commit:
+sops --config .sops.yaml -e -i platform/secrets/<name>.sops.yaml
+git add platform/secrets/<name>.sops.yaml && git commit && git push
+# if a bootstrap-made secret already exists with that name, the operator refuses to
+# adopt it ("Child secret is not owned") — delete it, then nudge a reconcile:
+kubectl delete secret <name> -n <ns>
+kubectl annotate sopssecret <name> -n <ns> reconcile.now="$(date +%s)" --overwrite
+```
+
+**Legacy bootstrap scripts.** The not-yet-migrated secrets are still created by
+`bootstrap/*-secret.sh` via `kubectl create secret` (re-run a script to recreate its
+secret; the scripts make the namespace first). Migrate them to SOPS as above when
+convenient — higher-risk ones (`minio-tenant-config`, CNPG `*-pg-user`,
+`cloudflare-api-token`) have live consumers that react to changes, so do those
+deliberately.
 
 ## Bootstrap (one-time setup)
 
