@@ -1,0 +1,29 @@
+# Catch-all: any *.bergtobias.com host with no more-specific HTTPRoute lands here
+# and gets the styled 404. Gateway API ranks exact hostnames above wildcards, so
+# real services (grafana.bergtobias.com, …) always win; only unmatched hosts fall
+# through. No external-dns annotation — the *.bergtobias.com wildcard CNAME resolves it.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: notfound
+  namespace: home
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: main
+      namespace: traefik
+      sectionName: websecure
+  hostnames:
+    - "*.bergtobias.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: notfound
+          port: 80
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /

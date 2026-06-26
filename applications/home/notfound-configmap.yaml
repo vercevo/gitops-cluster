@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notfound-files
+  namespace: home
+data:
+  # nginx returns HTTP 404 for every request, serving the styled page as the body.
+  default.conf: |
+    server {
+        listen       80;
+        server_name  _;
+        root /usr/share/nginx/html;
+
+        error_page 404 /404.html;
+        location = /404.html { internal; }
+        location / { return 404; }
+    }
+  404.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>404 · bergtobias.com</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          background: radial-gradient(1200px 600px at 70% -10%, #1a2548 0%, #0b1020 55%);
+          color: #e8ecf5; min-height: 100vh;
+          display: flex; align-items: center; justify-content: center; text-align: center;
+          padding: 2rem;
+        }
+        .box { max-width: 520px; }
+        .code {
+          font-size: clamp(5rem, 22vw, 9rem); font-weight: 800; letter-spacing: -.04em;
+          line-height: 1; background: linear-gradient(180deg, #6ea8fe, #3b63b8);
+          -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        h1 { font-size: 1.5rem; font-weight: 650; margin-top: .5rem; }
+        p { color: #93a0c0; margin-top: .8rem; line-height: 1.5; }
+        a.home {
+          display: inline-block; margin-top: 1.8rem; text-decoration: none;
+          color: #e8ecf5; background: #151c33; border: 1px solid #243056;
+          border-radius: 12px; padding: .7rem 1.3rem; transition: all .15s ease;
+        }
+        a.home:hover { border-color: #6ea8fe; background: #1d2747; transform: translateY(-2px); }
+      </style>
+    </head>
+    <body>
+      <div class="box">
+        <div class="code">404</div>
+        <h1>Nothing routes here</h1>
+        <p>This hostname resolves to the cluster, but no service is listening on it.
+           Check the spelling, or head back to the front door.</p>
+        <a class="home" href="https://home.bergtobias.com">← home.bergtobias.com</a>
+      </div>
+    </body>
+    </html>
