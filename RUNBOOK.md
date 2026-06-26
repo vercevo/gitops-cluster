@@ -204,11 +204,15 @@ entries below.
     they're not separately scrapable and would show as permanently "down".
   - **Prometheus TSDB is a local-path PVC** (7d / 6GiB), not S3. S3/MinIO only
     enters the picture with Loki in the deferred logs phase.
-  - **Trimmed hard for the 7.6Gi node** (already ~90% used): 60s scrape, WAL
-    compression, Prometheus mem limit 512Mi, Grafana 192Mi, **Grafana dashboard
-    sidecars disabled** (`defaultDashboardsEnabled: false`; Prometheus datasource
-    provisioned via `additionalDataSources`). Import dashboards by ID as needed.
-    The untrimmed default stack OOM-pressured the node — keep this lean until RAM grows.
+  - **Trimmed for the 7.6Gi node**: 60s scrape, WAL compression, Prometheus mem
+    limit 512Mi, Grafana 256Mi. The untrimmed default stack OOM-pressured the node
+    (which is why **dagster compute is disabled** below — they don't both fit). Keep
+    this lean until RAM grows.
+  - **Do NOT disable the Grafana sidecars.** In kube-prometheus-stack the
+    `sidecar.datasources`/`sidecar.dashboards` sidecars are what provision the
+    Prometheus datasource and load the bundled dashboards. An earlier over-trim set
+    them `false`, which left Grafana with **no datasource at all** (manual
+    `additionalDataSources` did not render a provisioning file). They are on.
 - **dagster** — Dagster orchestrator for the `elt-tutorial` ELT (ns `dagster`),
   replacing Airflow. **⚠ COMPUTE CURRENTLY DISABLED** to free RAM for the
   observability stack — this 7.6Gi node can't run both (the Evidence build was

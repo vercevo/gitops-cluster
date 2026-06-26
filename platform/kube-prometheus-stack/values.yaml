@@ -56,23 +56,15 @@ prometheus:
         memory: 512Mi
 
 grafana:
-  # Sidecar-loaded bundle dashboards are disabled to drop the two extra
-  # configmap-watching sidecar containers (trim-hard). Import dashboards by ID
-  # later (e.g. Node Exporter Full 1860, Kubernetes views) once the node has room.
-  defaultDashboardsEnabled: false
-
-  # With the sidecars off, provision the Prometheus datasource explicitly.
+  # Bundled dashboards on. The sidecars are what provision the Prometheus
+  # datasource and load the dashboard configmaps in kube-prometheus-stack — do
+  # NOT disable them (an earlier trim did, which left Grafana with no datasource).
+  defaultDashboardsEnabled: true
   sidecar:
     dashboards:
-      enabled: false
+      enabled: true
     datasources:
-      enabled: false
-  additionalDataSources:
-    - name: Prometheus
-      type: prometheus
-      access: proxy
-      url: http://kube-prometheus-stack-prometheus.monitoring:9090
-      isDefault: true
+      enabled: true
 
   # TLS terminates at Cloudflare/Traefik; expose plain HTTP. HTTPRoute (not the
   # chart ingress) publishes grafana.bergtobias.com.
@@ -113,9 +105,9 @@ grafana:
   resources:
     requests:
       cpu: 30m
-      memory: 96Mi
+      memory: 128Mi
     limits:
-      memory: 192Mi
+      memory: 256Mi
 
 # Cluster-state + node metrics (chart defaults keep these on; pinned here for clarity).
 kube-state-metrics:
