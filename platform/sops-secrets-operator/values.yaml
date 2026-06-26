@@ -1,0 +1,20 @@
+# sops-secrets-operator — decrypts SopsSecret CRs (committed encrypted in git) into
+# real k8s Secrets, using the cluster age key. The age private key is mounted from
+# the `sops-age-key` secret (created by bootstrap/sops-age-secret.sh, NOT in git).
+
+# Tell SOPS where to find the age key (mounted below).
+extraEnv:
+  - name: SOPS_AGE_KEY_FILE
+    value: /etc/sops-age/keys.txt
+
+secretsAsFiles:
+  - name: sops-age
+    mountPath: /etc/sops-age
+    secretName: sops-age-key
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 48Mi
+  limits:
+    memory: 96Mi

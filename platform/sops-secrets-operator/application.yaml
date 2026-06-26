@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sops-secrets-operator
+  namespace: argocd
+  annotations:
+    # Wave 0: installs the SopsSecret CRD + operator before anything that ships
+    # SopsSecret resources.
+    argocd.argoproj.io/sync-wave: "0"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    - repoURL: https://isindir.github.io/sops-secrets-operator/
+      chart: sops-secrets-operator
+      targetRevision: "0.27.*"
+      helm:
+        valueFiles:
+          - $values/platform/sops-secrets-operator/values.yaml
+    - repoURL: https://github.com/vercevo/gitops-cluster
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sops-secrets-operator
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

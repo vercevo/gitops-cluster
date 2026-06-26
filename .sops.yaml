@@ -1,0 +1,9 @@
+# SOPS encryption rules. Files ending in *.sops.yaml are encrypted to the cluster's
+# age recipient below (PUBLIC key — safe in git). Only the values under `data` /
+# `stringData` keys are encrypted; structure stays readable. The matching PRIVATE
+# key lives in .secrets/sops-age.key (git-ignored) and in the in-cluster
+# `sops-age-key` secret the sops-secrets-operator uses to decrypt.
+creation_rules:
+  - path_regex: \.sops\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    age: age1u7wzh5ljlvz2kq7ha7pxpky2rw5llzgnhkaj0xq80httdpxvsagqz8pzll
