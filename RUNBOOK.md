@@ -74,18 +74,17 @@ writing the defaults explicitly in git. Seen with:
 - **CNPG Cluster** `managed.roles[]`: add `ensure: present`, `inherit: true`,
   `connectionLimit: -1`.
 
-## DNS — the painful part
+## DNS — one wildcard, then just HTTPRoutes
 
-`external-dns` runs (source `gateway-httproute`) but its current version has
-"new behavior": when the HTTPRoute/Gateway provides a target it **ignores**
-`--default-targets` (the tunnel) and tries to create an **A record to the
-private node IP `192.168.10.10`** — which **Cloudflare rejects for proxied
-records** (`error 9003`). The `external-dns.alpha.kubernetes.io/target`
-annotation does NOT override this for the gateway source.
+A single **proxied wildcard** `*.bergtobias.com → <tunnel>.cfargotunnel.com`
+(orange-cloud) resolves **every** cluster hostname. The tunnel forwards all of
+`*.bergtobias.com` to Traefik, and Traefik host-routes by HTTPRoute hostname.
 
-**Therefore: every public hostname is a manually-created proxied CNAME → tunnel,
-via the Cloudflare API.** external-dns can't own them (its create fails), so it
-leaves them alone. To add one:
+**So to expose a new service you add an HTTPRoute — and that's it. There is no
+per-host DNS step.** (The old ritual was a manually-created proxied CNAME per
+host, because external-dns can't create them; the wildcard makes that obsolete.)
+
+The wildcard record (already created, `proxied=true`):
 
 ```bash
 CF_TOKEN=$(kubectl get secret cloudflare-api-token -n external-dns -o jsonpath='{.data.token}' | base64 -d)
@@ -93,14 +92,27 @@ ZONE=0cbdabef317842e700c3238e4c996363
 TUNNEL=07a7a2df-49c5-41a5-8e59-6403b236a5d5.cfargotunnel.com
 curl -s -X POST -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
   "https://api.cloudflare.com/client/v4/zones/$ZONE/dns_records" \
-  --data "{\"type\":\"CNAME\",\"name\":\"<host>.bergtobias.com\",\"content\":\"$TUNNEL\",\"proxied\":true}"
+  --data "{\"type\":\"CNAME\",\"name\":\"*.bergtobias.com\",\"content\":\"$TUNNEL\",\"proxied\":true}"
 ```
 
-Verify: `dig +short <host>.bergtobias.com` (Cloudflare IPs) and
-`curl -s -o /dev/null -w '%{http_code}' https://<host>.bergtobias.com/`.
+Verify a brand-new host routes (expect a Traefik **404**, served by `cloudflare`
+— not a tunnel error): `curl -s -o /dev/null -w '%{http_code}' https://anything-new.bergtobias.com/`.
 
-The wildcard tunnel already routes any `*.bergtobias.com` to Traefik, so you
-only need the CNAME + an HTTPRoute.
+**Things to know:**
+- **Existing per-host CNAMEs (grafana, argocd, …) are now redundant** — a specific
+  record just takes precedence over the wildcard (same target). Harmless; leave or prune.
+- **A new HTTPRoute is instantly public** via the wildcard — the per-host CNAME used
+  to be an accidental "make it public" gate; that gate is gone. **Gate sensitive UIs
+  behind Authentik / oauth2-proxy.**
+- **Stay one DNS level deep.** Cloudflare terminates TLS at its edge with its own cert;
+  free Universal SSL covers `bergtobias.com` + `*.bergtobias.com` (one level) but **not**
+  a deeper wildcard like `*.k8s.bergtobias.com` (that needs Cloudflare Advanced Certificate
+  Manager). The in-cluster `wildcard-k8s-bergtobias-com` cert does **not** help the public
+  path — the tunnel runs `noTLSVerify`, so browsers see Cloudflare's edge cert, not Traefik's.
+- The `external-dns.alpha.kubernetes.io/*` annotations on HTTPRoutes are now **cosmetic**
+  (the wildcard does the resolving). external-dns's gateway source still mis-creates an
+  A-record to the private node IP `192.168.10.10`, which Cloudflare rejects (`error 9003`);
+  it is effectively **unused for ingress** and could be retired.
 
 ## Secrets — bootstrap, not GitOps
 
@@ -160,7 +172,7 @@ VAULT_TOKEN="$TOKEN" ./bootstrap/vault-configure.sh
    `Grafana Admins` group and add yourself (maps to Grafana Admin; others Viewer).
 2. `GRAFANA_OIDC_CLIENT_ID=… GRAFANA_OIDC_CLIENT_SECRET=… ./bootstrap/grafana-secret.sh`
    (prints a break-glass local `admin` password; store it).
-3. Add a proxied CNAME `grafana.bergtobias.com` → tunnel (see **DNS** above).
+3. DNS: nothing to do — the `*.bergtobias.com` wildcard already resolves it (see **DNS** above).
 
 **Loki rollout (one-time):**
 1. `./bootstrap/loki-secret.sh` (reuses the MinIO root creds → secret `loki-s3`).
@@ -184,8 +196,8 @@ see "Secrets" above and the component entries below.
 2. In Authentik, create an **OAuth2/OpenID provider** + application `dagster`
    (app slug `dagster`). Redirect URI: `https://dagster.bergtobias.com/oauth2/callback`.
 3. `DAGSTER_OIDC_CLIENT_ID=… DAGSTER_OIDC_CLIENT_SECRET=… ./bootstrap/dagster-secret.sh`
-4. Add proxied CNAMEs `dagster.bergtobias.com` and `jaffle.bergtobias.com` → tunnel
-   (see **DNS** above).
+4. DNS: nothing to do — the `*.bergtobias.com` wildcard resolves both
+   `dagster.bergtobias.com` and `jaffle.bergtobias.com` (see **DNS** above).
 
 ## Components
 
