@@ -1,0 +1,18 @@
+# Promtail — DaemonSet that tails every pod's logs and ships them to Loki.
+# (Promtail is in maintenance mode upstream in favour of Grafana Alloy, but it's
+# the lightest collector and fine for a single-node homelab.)
+
+config:
+  clients:
+    - url: http://loki.loki.svc.cluster.local:3100/loki/api/v1/push
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+# Scraped by kube-prometheus-stack (ServiceMonitor CRD).
+serviceMonitor:
+  enabled: true

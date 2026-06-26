@@ -162,9 +162,15 @@ VAULT_TOKEN="$TOKEN" ./bootstrap/vault-configure.sh
    (prints a break-glass local `admin` password; store it).
 3. Add a proxied CNAME `grafana.bergtobias.com` → tunnel (see **DNS** above).
 
+**Loki rollout (one-time):**
+1. `./bootstrap/loki-secret.sh` (reuses the MinIO root creds → secret `loki-s3`).
+   The `loki` bucket is declared in `platform/minio-tenant/tenant.yaml` and
+   auto-created by the MinIO operator — no manual bucket step.
+2. No DNS/HTTPRoute: Loki is internal-only (queried by Grafana in-cluster).
+
 Per-component secret scripts (`github-app-secret.sh`, `minio-secret.sh`,
-`grafana-secret.sh`, …) are run as needed — see "Secrets" above and the component
-entries below.
+`grafana-secret.sh`, `loki-secret.sh`, …) are run as needed — see "Secrets" above
+and the component entries below.
 
 **Dagster rollout (one-time):**
 1. Code + Evidence images publish to GHCR from `vercevo/elt-tutorial`
@@ -213,6 +219,21 @@ entries below.
     Prometheus datasource and load the bundled dashboards. An earlier over-trim set
     them `false`, which left Grafana with **no datasource at all** (manual
     `additionalDataSources` did not render a provisioning file). They are on.
+- **loki + promtail** — log aggregation (ns `loki`), the Phase 2 of observability.
+  **Loki** (`grafana/loki`, single-binary/monolithic mode) stores chunks + index in
+  the MinIO **`loki` bucket** (S3, `minio.minio.svc.cluster.local:80`, path-style,
+  plain HTTP); 72h retention. **Promtail** (`grafana/promtail`, DaemonSet) tails all
+  pod logs → Loki. Grafana queries it via a **Loki datasource** shipped as a labelled
+  configmap (`grafana_datasource: "1"`) into the `monitoring` ns so the Grafana sidecar
+  auto-provisions it. S3 creds via `bootstrap/loki-secret.sh` (secret `loki-s3`, reuses
+  the MinIO root creds; read from env, not git). **Gotchas:**
+  - **Disable the chart's memcached caches.** `chunksCache`/`resultsCache` default to
+    multi-GiB memory requests and would never schedule on this node — both `enabled: false`,
+    along with the scalable-mode `read`/`write`/`backend`, the bundled `minio`, `gateway`,
+    and `lokiCanary`. Single-binary + S3 only.
+  - **Loki S3 creds come from the `loki-s3` secret via env** (`AWS_ACCESS_KEY_ID`/
+    `AWS_SECRET_ACCESS_KEY`, `singleBinary.extraEnvFrom`) — the s3 config block carries
+    no keys, so nothing secret lands in git.
 - **dagster** — Dagster orchestrator for the `elt-tutorial` ELT (ns `dagster`),
   replacing Airflow. **⚠ COMPUTE CURRENTLY DISABLED** to free RAM for the
   observability stack — this 7.6Gi node can't run both (the Evidence build was

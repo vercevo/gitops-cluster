@@ -1,0 +1,84 @@
+# Loki — single-binary (monolithic) mode, S3 backend on the in-cluster MinIO.
+# Sized lean for the 7.6Gi node: the chart's default memcached caches request
+# GIGABYTES and MUST stay disabled, as must the scalable-mode read/write/backend
+# and the bundled minio/gateway/canary. See RUNBOOK.
+
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: s3
+    bucketNames:
+      chunks: loki
+      ruler: loki
+      admin: loki
+    s3:
+      # In-cluster MinIO S3 API (plain HTTP; TLS terminates at Traefik/Cloudflare).
+      # Access/secret keys come from the `loki-s3` secret via env (see singleBinary
+      # extraEnvFrom + bootstrap/loki-secret.sh) — NOT in git.
+      endpoint: minio.minio.svc.cluster.local:80
+      region: us-east-1
+      s3ForcePathStyle: true
+      insecure: true
+  schemaConfig:
+    configs:
+      - from: "2024-04-01"
+        store: tsdb
+        object_store: s3
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+  limits_config:
+    retention_period: 72h
+    reject_old_samples: true
+    reject_old_samples_max_age: 168h
+  compactor:
+    retention_enabled: true
+    delete_request_store: s3
+  # The pattern ingester is extra memory we don't need on this node.
+  pattern_ingester:
+    enabled: false
+
+singleBinary:
+  replicas: 1
+  extraEnvFrom:
+    - secretRef:
+        name: loki-s3
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 200Mi
+    limits:
+      memory: 384Mi
+
+# --- Everything below is disabled to keep the footprint tiny on a single node ---
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0
+# memcached caches default to multi-GiB requests — would never schedule here.
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+# Talk to the loki Service directly; no nginx gateway.
+gateway:
+  enabled: false
+# Extra probe pod we don't need.
+lokiCanary:
+  enabled: false
+# We use the existing MinIO tenant, not the chart's bundled one.
+minio:
+  enabled: false
+test:
+  enabled: false
