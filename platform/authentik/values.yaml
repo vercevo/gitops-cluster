@@ -20,6 +20,21 @@ global:
       value: authentik-redis
     - name: AUTHENTIK_LOG_LEVEL
       value: info
+    # OIDC client secrets for the oidc-apps blueprint (!Env). Injected from the
+    # authentik-oidc-secrets Secret (platform/secrets/authentik-oidc-secrets.sops.yaml)
+    # so the secret values never live in the in-git blueprint ConfigMap.
+    - name: OIDC_ARGOCD_CLIENT_SECRET
+      valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_ARGOCD_CLIENT_SECRET } }
+    - name: OIDC_BACKSTAGE_CLIENT_SECRET
+      valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_BACKSTAGE_CLIENT_SECRET } }
+    - name: OIDC_HARBOR_CLIENT_SECRET
+      valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_HARBOR_CLIENT_SECRET } }
+    - name: OIDC_DAGSTER_CLIENT_SECRET
+      valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_DAGSTER_CLIENT_SECRET } }
+    - name: OIDC_GRAFANA_CLIENT_SECRET
+      valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_GRAFANA_CLIENT_SECRET } }
+    - name: OIDC_MINIO_CLIENT_SECRET
+      valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_MINIO_CLIENT_SECRET } }
 
 postgresql:
   enabled: false
