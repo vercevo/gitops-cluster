@@ -12,8 +12,12 @@ global:
 
 # ---- Our code location (gRPC server from the image CI publishes) -------------
 # DISABLED: node too small to run Dagster + observability (see application.yaml).
+# Both flags are required — with enabled:false but enableSubchart left true, the
+# webserver workspace template fails ("subchart cannot be enabled if workspace.yaml
+# is not created"). The deployments block below is retained (ignored) for re-enabling.
 dagster-user-deployments:
   enabled: false
+  enableSubchart: false
   deployments:
     - name: etl-tutorial
       image:
