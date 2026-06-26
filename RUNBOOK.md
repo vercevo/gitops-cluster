@@ -196,8 +196,13 @@ entries below.
   - **k3s control-plane targets disabled** (`kubeScheduler`/`kubeControllerManager`/
     `kubeEtcd`/`kubeProxy` `enabled: false`) — k3s bundles them into one binary, so
     they're not separately scrapable and would show as permanently "down".
-  - **Prometheus TSDB is a local-path PVC** (15d / 18GiB), not S3. S3/MinIO only
+  - **Prometheus TSDB is a local-path PVC** (7d / 6GiB), not S3. S3/MinIO only
     enters the picture with Loki in the deferred logs phase.
+  - **Trimmed hard for the 7.6Gi node** (already ~90% used): 60s scrape, WAL
+    compression, Prometheus mem limit 512Mi, Grafana 192Mi, **Grafana dashboard
+    sidecars disabled** (`defaultDashboardsEnabled: false`; Prometheus datasource
+    provisioned via `additionalDataSources`). Import dashboards by ID as needed.
+    The untrimmed default stack OOM-pressured the node — keep this lean until RAM grows.
 - **dagster** — Dagster orchestrator for the `elt-tutorial` ELT (ns `dagster`),
   replacing Airflow. Official Helm chart (`dagster/dagster`, multi-source app +
   `applications/dagster/values.yaml`). `K8sRunLauncher` (each run is a Job pod);

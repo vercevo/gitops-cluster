@@ -29,9 +29,16 @@ prometheus:
     probeSelectorNilUsesHelmValues: false
     scrapeConfigSelectorNilUsesHelmValues: false
 
+    # Trimmed hard for a memory-constrained single node (~7.6Gi total, already
+    # ~90% used by other workloads). 60s scrape + WAL compression + a low memory
+    # ceiling keep Prometheus from pushing the node into swap/OOM.
+    scrapeInterval: 60s
+    evaluationInterval: 60s
+    walCompression: true
+
     # Bounded local TSDB retention (S3 is a Phase 2 / Loki concern, not Prometheus).
-    retention: 15d
-    retentionSize: "18GiB"
+    retention: 7d
+    retentionSize: "6GiB"
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -39,17 +46,33 @@ prometheus:
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
-              storage: 20Gi
+              storage: 10Gi
 
     resources:
       requests:
-        cpu: 200m
-        memory: 512Mi
+        cpu: 100m
+        memory: 256Mi
       limits:
-        memory: 1536Mi
+        memory: 512Mi
 
 grafana:
-  defaultDashboardsEnabled: true
+  # Sidecar-loaded bundle dashboards are disabled to drop the two extra
+  # configmap-watching sidecar containers (trim-hard). Import dashboards by ID
+  # later (e.g. Node Exporter Full 1860, Kubernetes views) once the node has room.
+  defaultDashboardsEnabled: false
+
+  # With the sidecars off, provision the Prometheus datasource explicitly.
+  sidecar:
+    dashboards:
+      enabled: false
+    datasources:
+      enabled: false
+  additionalDataSources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://kube-prometheus-stack-prometheus.monitoring:9090
+      isDefault: true
 
   # TLS terminates at Cloudflare/Traefik; expose plain HTTP. HTTPRoute (not the
   # chart ingress) publishes grafana.bergtobias.com.
@@ -85,10 +108,10 @@ grafana:
 
   resources:
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 30m
+      memory: 96Mi
     limits:
-      memory: 256Mi
+      memory: 192Mi
 
 # Cluster-state + node metrics (chart defaults keep these on; pinned here for clarity).
 kube-state-metrics:
