@@ -327,13 +327,17 @@ are run as needed — see "Secrets" above and the component entries below.
   the **worker** (mount path `/blueprints/mounted/cm-authentik-blueprints/`).
   Discovery runs periodically; force it with
   `ak shell -c 'from authentik.blueprints.v1.tasks import blueprints_discovery; blueprints_discovery.delay()'`
-  on the **worker**, then check `BlueprintInstance` status. Currently manages the
-  `Grafana Admins` group. **OIDC providers/apps are still created imperatively via
-  `ak shell`** (grafana, minio, dagster, argocd, …) — to convert one to a blueprint,
-  declare the `OAuth2Provider` + `Application`, and set the **client secret with the
-  `!Env <VAR>` tag** (inject `<VAR>` into the authentik pods from a k8s Secret) so the
-  secret never lands in the in-git ConfigMap. Match the existing `client_id` and flows
-  exactly or you'll break live login.
+  on the **worker**, then check `BlueprintInstance` status. **All OIDC providers +
+  applications are now declarative** (argocd, backstage, harbor, dagster, grafana,
+  minio) in the `oidc-apps.yaml` blueprint, plus the `Grafana Admins` group. Each
+  provider's **client_secret is set via `!Env OIDC_<APP>_CLIENT_SECRET`**, injected
+  into the authentik pods (values.yaml `global.env`) from the **`authentik-oidc-secrets`**
+  Secret (SOPS: `platform/secrets/authentik-oidc-secrets.sops.yaml`) — so secrets never
+  land in the in-git ConfigMap. The blueprint is **generated** from the live providers by
+  `scripts/gen-authentik-blueprints.py` (regenerate + re-encrypt the secret if you add an
+  app). Airflow (retired) is intentionally excluded. **To add a new OIDC app:** add its
+  client_secret to the SopsSecret + a `global.env` entry, add an entry to the generator/
+  blueprint, push — match `client_id`/flows exactly or you'll break live login.
 - **minio** — S3 object storage. Operator (`minio-operator`) + Tenant `techdocs`
   (`minio` ns, SNSD). Buckets: `techdocs` (Backstage), `loki`, `tempo`. S3 API
   external at `s3.bergtobias.com`; in-cluster at
