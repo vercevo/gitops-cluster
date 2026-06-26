@@ -85,8 +85,12 @@ grafana:
   grafana.ini:
     server:
       root_url: https://grafana.bergtobias.com
-    # Login form stays enabled so the local `admin` account is a break-glass path
-    # alongside the Authentik OIDC button.
+    auth:
+      # OIDC-only: hide the username/password form (Authentik button is the only
+      # login path). Break-glass note: the local `admin` account can no longer log
+      # in via the UI — to recover, set disable_login_form back to false (or use the
+      # Grafana admin API). oauth_auto_login could also skip straight to Authentik.
+      disable_login_form: true
     "auth.generic_oauth":
       enabled: true
       name: Authentik
