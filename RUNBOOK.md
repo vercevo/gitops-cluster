@@ -150,20 +150,12 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.pas
 CF_API_TOKEN=<token> ./bootstrap/cloudflare-secret.sh
 ```
 
-**3 — Initialize Vault** (wait until `vault-0` is Running). Writes unseal key + root token
-to `.secrets/vault-init.json` (git-ignored) — **back this up**.
-```bash
-./bootstrap/vault-init.sh
-# Unseal after a pod restart:
-KEY=$(python3 -c "import json;print(json.load(open('.secrets/vault-init.json'))['unseal_keys_b64'][0])")
-kubectl exec -n vault vault-0 -- vault operator unseal "$KEY"
-```
-
-**4 — Configure Vault** (Kubernetes auth + KV-v2).
-```bash
-TOKEN=$(python3 -c "import json;print(json.load(open('.secrets/vault-init.json'))['root_token'])")
-VAULT_TOKEN="$TOKEN" ./bootstrap/vault-configure.sh
-```
+> **Vault was retired** — it was deployed and bootstrapped but had **zero
+> consumers** (no vault-agent injection, no ESO/VSO), so it was pure overhead
+> (~250Mi + manual unseal after every pod restart on a single node). Secrets are
+> created by the per-component `bootstrap/*-secret.sh` scripts (see **Secrets**
+> above). If you want git-managed secrets, the intended direction is **SOPS+age**
+> (encrypted secrets committed to the repo), not Vault.
 
 **Grafana rollout (one-time):**
 1. In Authentik, create an **OAuth2/OpenID provider** + application `grafana`
