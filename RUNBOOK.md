@@ -190,6 +190,12 @@ entries below.
   to admin, else Viewer. Secret via `bootstrap/grafana-secret.sh`. **Scope is
   metrics + dashboards only** — Alertmanager is disabled and logs (Loki/Alloy on
   MinIO S3) and traces (Tempo) are deferred. **Gotchas:**
+  - **Authentik OIDC endpoints are GLOBAL, not per-slug.** Grafana's
+    `auth_url`/`token_url`/`api_url` must be `/application/o/{authorize,token,userinfo}/`
+    (no slug). Only the **issuer** and **jwks_uri** are per-app-slug
+    (`/application/o/grafana/`). Using a per-slug authorize URL 404s and surfaces as
+    "application not found" at login. (Applies to any native-OIDC client; oauth2-proxy
+    auto-discovers from the issuer and avoids this.)
   - **`*SelectorNilUsesHelmValues: false`** (service/pod/rule/probe/scrapeConfig)
     in values — otherwise Prometheus only scrapes monitors carrying the chart's
     release label and silently ignores app-namespace ones.
@@ -204,7 +210,14 @@ entries below.
     provisioned via `additionalDataSources`). Import dashboards by ID as needed.
     The untrimmed default stack OOM-pressured the node — keep this lean until RAM grows.
 - **dagster** — Dagster orchestrator for the `elt-tutorial` ELT (ns `dagster`),
-  replacing Airflow. Official Helm chart (`dagster/dagster`, multi-source app +
+  replacing Airflow. **⚠ COMPUTE CURRENTLY DISABLED** to free RAM for the
+  observability stack — this 7.6Gi node can't run both (the Evidence build was
+  OOM-crash-looping). In git: `dagsterWebserver.replicaCount: 0`,
+  `dagsterDaemon.enabled: false`, `dagster-user-deployments.{enabled,enableSubchart}: false`
+  (both flags needed — disabling only `enabled` fails the webserver workspace template),
+  `evidence`/`oauth2-proxy` `replicas: 0`. The **CNPG Postgres data (jaffle-pg/dagster-pg)
+  is left running and untouched**. Re-enable by restoring those replica counts / flags
+  once the node has more RAM. Official Helm chart (`dagster/dagster`, multi-source app +
   `applications/dagster/values.yaml`). `K8sRunLauncher` (each run is a Job pod);
   metadata DB is CNPG `dagster-pg`, the analytics **warehouse** is CNPG `jaffle-pg`
   (db `jaffle`, schema `main`). Code-location image
