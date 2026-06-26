@@ -1,0 +1,39 @@
+# Tempo — single-binary mode, traces stored in the MinIO `tempo` bucket (S3).
+# Receives OTLP from the OpenTelemetry Collector. Sized lean for the 7.6Gi node.
+# S3 creds come from the `tempo-s3` secret via env (minio-go reads AWS_* from env
+# when access_key/secret_key are unset) — nothing secret in git. See RUNBOOK.
+
+tempo:
+  storage:
+    trace:
+      backend: s3
+      s3:
+        bucket: tempo
+        endpoint: minio.minio.svc.cluster.local:80
+        insecure: true
+        forcepathstyle: true
+  retention: 72h
+  # OTLP only (the Collector forwards here); drop the default jaeger/zipkin/opencensus
+  # receivers we don't use.
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 384Mi
+  # S3 credentials (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY) from the secret.
+  extraEnvFrom:
+    - secretRef:
+        name: tempo-s3
+
+persistence:
+  enabled: true
+  storageClassName: local-path
+  size: 5Gi

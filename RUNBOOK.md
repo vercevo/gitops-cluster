@@ -168,9 +168,15 @@ VAULT_TOKEN="$TOKEN" ./bootstrap/vault-configure.sh
    auto-created by the MinIO operator — no manual bucket step.
 2. No DNS/HTTPRoute: Loki is internal-only (queried by Grafana in-cluster).
 
+**Tempo rollout (one-time):**
+1. `./bootstrap/tempo-secret.sh` (reuses MinIO root creds → secret `tempo-s3`).
+2. The `tempo` bucket: declared in `tenant.yaml`, but the operator does **not**
+   auto-create buckets added to an existing tenant — create it once with `mc`
+   (see the loki+tempo gotcha below). No DNS/HTTPRoute (internal-only).
+
 Per-component secret scripts (`github-app-secret.sh`, `minio-secret.sh`,
-`grafana-secret.sh`, `loki-secret.sh`, …) are run as needed — see "Secrets" above
-and the component entries below.
+`grafana-secret.sh`, `loki-secret.sh`, `tempo-secret.sh`, …) are run as needed —
+see "Secrets" above and the component entries below.
 
 **Dagster rollout (one-time):**
 1. Code + Evidence images publish to GHCR from `vercevo/elt-tutorial`
@@ -234,6 +240,22 @@ and the component entries below.
   - **Loki S3 creds come from the `loki-s3` secret via env** (`AWS_ACCESS_KEY_ID`/
     `AWS_SECRET_ACCESS_KEY`, `singleBinary.extraEnvFrom`) — the s3 config block carries
     no keys, so nothing secret lands in git.
+- **tempo + opentelemetry-collector** — distributed tracing (Phase 3, completing the
+  Grafana **LGTM** stack: Prometheus=metrics, Loki=logs, Tempo=traces, all in Grafana —
+  no ELK/Jaeger needed). **Tempo** (`grafana/tempo`, single-binary, ns `tempo`) stores
+  trace blocks in the MinIO **`tempo` bucket** (S3); 72h retention; receives OTLP on
+  4317/4318; **query API on port 3200** (datasource configmap → `monitoring` ns).
+  **OpenTelemetry Collector** (`open-telemetry/opentelemetry-collector`, contrib image,
+  deployment mode, ns `opentelemetry`) is the OTLP ingest gateway — apps send spans to
+  `opentelemetry-collector.opentelemetry.svc:4317` and it forwards to Tempo. **Traces
+  stay empty until apps emit OTLP spans** (nothing is auto-instrumented yet). S3 creds
+  via `bootstrap/tempo-secret.sh` (`tempo-s3`, MinIO root creds, env not git). **Gotchas:**
+  - **MinIO buckets aren't auto-created when added to an existing tenant** — adding a
+    bucket to `tenant.yaml.spec.buckets` did not provision it; create it once with `mc`
+    (`mc mb`) using creds injected from the secret (never as pod-spec args). Loki/Tempo
+    crash-loop with `NoSuchBucket` until the bucket exists.
+  - **OTel chart requires `mode` + `image.repository` explicitly** (no defaults); use the
+    contrib image with `command.name: otelcol-contrib`.
 - **dagster** — Dagster orchestrator for the `elt-tutorial` ELT (ns `dagster`),
   replacing Airflow. **⚠ COMPUTE CURRENTLY DISABLED** to free RAM for the
   observability stack — this 7.6Gi node can't run both (the Evidence build was

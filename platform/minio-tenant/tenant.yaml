@@ -31,4 +31,5 @@ spec:
   # Operator auto-creates these buckets on first reconcile.
   buckets:
     - name: techdocs
-    - name: loki   # Loki log chunks + index (see platform/loki)
+    - name: loki    # Loki log chunks + index (see platform/loki)
+    - name: tempo   # Tempo trace blocks (see platform/tempo)
