@@ -47,6 +47,19 @@ data:
         .fill { height: 100%; width: 0; border-radius: 999px;
                 background: linear-gradient(90deg,#00f5d4,#fff200,#ff3cac); animation: fill 3s ease forwards; }
         @keyframes fill { to { width: 110%; } }
+        .links { margin-top: 1.8rem; display: flex; flex-wrap: wrap; gap: .7rem; justify-content: center; max-width: 680px; padding: 0 1rem; }
+        .btn {
+          font-size: 1rem; font-weight: 800; text-decoration: none; color: #1b0033;
+          background: linear-gradient(90deg,#fff200,#00f5d4); border: none; cursor: pointer;
+          padding: .75rem 1.2rem; border-radius: 999px; box-shadow: 0 6px 0 rgba(0,0,0,.25);
+          transition: transform .1s ease, box-shadow .1s ease;
+        }
+        .btn:hover { transform: translateY(-3px); box-shadow: 0 9px 0 rgba(0,0,0,.25); }
+        .btn:active { transform: translateY(2px); box-shadow: 0 3px 0 rgba(0,0,0,.25); }
+        .btn.pink { background: linear-gradient(90deg,#ff3cac,#ff7a00); color:#fff; }
+        .btn.rick { background: linear-gradient(90deg,#00f5d4,#fff200,#ff3cac); background-size:200% auto; animation: shine 3s linear infinite; }
+        body.disco { animation-duration: 1.2s; }
+        body.disco h1 { animation-duration: 1s; }
         .confetti { position: fixed; top: -10vh; font-size: 1.6rem; animation: fall linear infinite; z-index: -1; }
         @keyframes fall { to { transform: translateY(120vh) rotate(720deg); } }
         footer { position: fixed; bottom: 12px; font-size: .75rem; opacity: .6; }
@@ -61,6 +74,16 @@ data:
         <div class="bar"><div class="fill"></div></div>
         <span id="pct">0</span>% laddad 🔋
       </div>
+
+      <div class="links">
+        <a class="btn rick" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener">🎵 Rick Roll</a>
+        <a class="btn pink" href="https://open.spotify.com/playlist/37i9dQZF1DXaXB8fQg7xif" target="_blank" rel="noopener">🎧 Party-spellista</a>
+        <a class="btn" href="https://www.youtube.com/watch?v=ZXsQAXx_ao0" target="_blank" rel="noopener">😎 Meme</a>
+        <button class="btn" onclick="boom()">🎊 Mer konfetti</button>
+        <button class="btn pink" onclick="disco()">🪩 Disco-läge</button>
+        <button class="btn" onclick="beer()">🍺 Öl +1 (<span id="beers">0</span>)</button>
+      </div>
+
       <footer>serverad av nginx · applications/johanjoel · GitOps på bergtobias.com</footer>
       <script>
         // Emoji-konfetti
@@ -78,6 +101,26 @@ data:
         // Festmätare-räknare
         let n = 0; const el = document.getElementById("pct");
         const t = setInterval(() => { n += 3; if (n >= 110) { n = 110; clearInterval(t); } el.textContent = n; }, 80);
+
+        // Knapp-funktioner
+        function addConfetti(count) {
+          for (let i = 0; i < count; i++) {
+            const c = document.createElement("div"); c.className = "confetti";
+            c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            c.style.left = (Math.random() * 100) + "vw";
+            c.style.animationDuration = (3 + Math.random() * 4) + "s";
+            c.style.fontSize = (1 + Math.random() * 1.8) + "rem";
+            document.body.appendChild(c);
+            setTimeout(() => c.remove(), 9000);
+          }
+        }
+        function boom() { addConfetti(45); }
+        function disco() { document.body.classList.toggle("disco"); }
+        let beers = 0;
+        function beer() {
+          beers++; document.getElementById("beers").textContent = beers; addConfetti(4);
+          if (beers % 10 === 0) alert("🍺 " + beers + " öl! Johan & Joel går hårt! 🔥");
+        }
       </script>
     </body>
     </html>
