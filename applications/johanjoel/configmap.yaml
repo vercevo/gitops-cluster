@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: johanjoel-html
+  namespace: johanjoel
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="sv">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Johan &amp; Joel festar satan! 🔥</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          background: linear-gradient(300deg, #2d0b59, #b8005d, #ff7a00, #1b0033);
+          background-size: 400% 400%;
+          animation: party 9s ease infinite;
+          color: #fff; display: flex; flex-direction: column;
+          align-items: center; justify-content: center; text-align: center;
+          min-height: 100vh; position: relative;
+        }
+        @keyframes party {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .emoji { font-size: clamp(3rem, 12vw, 6rem); animation: bounce 1.2s ease-in-out infinite; }
+        @keyframes bounce { 0%,100%{transform:translateY(0) rotate(-6deg);} 50%{transform:translateY(-22px) rotate(6deg);} }
+        h1 {
+          font-size: clamp(2.4rem, 11vw, 6rem); font-weight: 900; letter-spacing: -.02em;
+          line-height: 1.05; margin: .4rem 1rem;
+          background: linear-gradient(90deg, #fff200, #ff3cac, #00f5d4, #fff200);
+          background-size: 300% auto; -webkit-background-clip: text; background-clip: text;
+          color: transparent; animation: shine 4s linear infinite;
+          text-shadow: 0 0 30px rgba(255,60,172,.4);
+        }
+        @keyframes shine { to { background-position: 300% center; } }
+        .tag { font-size: clamp(1.1rem, 4vw, 1.8rem); font-weight: 700; margin-top: .4rem;
+               text-transform: uppercase; letter-spacing: .15em; opacity: .95; }
+        .meter { margin-top: 1.6rem; font-size: 1rem; opacity: .85; }
+        .bar { width: min(80vw, 360px); height: 18px; border-radius: 999px; margin: .5rem auto 0;
+               background: rgba(255,255,255,.18); overflow: hidden; }
+        .fill { height: 100%; width: 0; border-radius: 999px;
+                background: linear-gradient(90deg,#00f5d4,#fff200,#ff3cac); animation: fill 3s ease forwards; }
+        @keyframes fill { to { width: 110%; } }
+        .confetti { position: fixed; top: -10vh; font-size: 1.6rem; animation: fall linear infinite; z-index: -1; }
+        @keyframes fall { to { transform: translateY(120vh) rotate(720deg); } }
+        footer { position: fixed; bottom: 12px; font-size: .75rem; opacity: .6; }
+      </style>
+    </head>
+    <body>
+      <div class="emoji">🔥🍻🪩🍾</div>
+      <h1>Johan &amp; Joel<br/>festar satan!</h1>
+      <div class="tag">Inga bromsar · bara fest 🚀</div>
+      <div class="meter">
+        Festmätare
+        <div class="bar"><div class="fill"></div></div>
+        <span id="pct">0</span>% laddad 🔋
+      </div>
+      <footer>serverad av nginx · applications/johanjoel · GitOps på bergtobias.com</footer>
+      <script>
+        // Emoji-konfetti
+        const emojis = ["🎉","🍻","🔥","🪩","🍾","⚡","💥","🎊","🕺","💃"];
+        for (let i = 0; i < 28; i++) {
+          const c = document.createElement("div");
+          c.className = "confetti";
+          c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+          c.style.left = (Math.random() * 100) + "vw";
+          c.style.animationDuration = (4 + Math.random() * 5) + "s";
+          c.style.animationDelay = (-Math.random() * 6) + "s";
+          c.style.fontSize = (1 + Math.random() * 1.8) + "rem";
+          document.body.appendChild(c);
+        }
+        // Festmätare-räknare
+        let n = 0; const el = document.getElementById("pct");
+        const t = setInterval(() => { n += 3; if (n >= 110) { n = 110; clearInterval(t); } el.textContent = n; }, 80);
+      </script>
+    </body>
+    </html>
