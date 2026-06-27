@@ -35,6 +35,8 @@ global:
       valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_GRAFANA_CLIENT_SECRET } }
     - name: OIDC_MINIO_CLIENT_SECRET
       valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_MINIO_CLIENT_SECRET } }
+    - name: OIDC_JOHANJOEL_CLIENT_SECRET
+      valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_JOHANJOEL_CLIENT_SECRET } }
 
 postgresql:
   enabled: false

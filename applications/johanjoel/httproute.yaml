@@ -1,4 +1,5 @@
-# Public party page (static, no auth). No external-dns annotation / CNAME needed —
+# Party page behind Authentik SSO: the route targets oauth2-proxy (which proxies
+# the johanjoel nginx after login), not the johanjoel Service directly. No CNAME —
 # the *.bergtobias.com wildcard resolves it; Traefik host-routes by hostname.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -18,7 +19,7 @@ spec:
     - backendRefs:
         - group: ""
           kind: Service
-          name: johanjoel
+          name: oauth2-proxy
           port: 80
           weight: 1
       matches:
