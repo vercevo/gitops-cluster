@@ -11,6 +11,8 @@ data:
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>bergtobias.com · cluster</title>
+      <!-- Umami analytics (self-hosted, privacy-friendly, no cookies) -->
+      <script defer src="https://umami.bergtobias.com/script.js" data-website-id="644084ff-35bd-4efb-93eb-df61e7120c71"></script>
       <style>
         :root {
           --bg: #0b1020;
