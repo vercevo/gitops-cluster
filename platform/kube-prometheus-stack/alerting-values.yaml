@@ -1,0 +1,406 @@
+# Grafana-managed alert rules, provisioned declaratively (merged into the
+# kube-prometheus-stack grafana subchart via application.yaml valueFiles).
+#
+# Pattern (learned the hard way — see RUNBOOK): query A returns the RAW value,
+# the threshold lives in expression C, and noDataState=OK. Putting the threshold
+# IN the query (`... > 90`) makes the healthy state return no rows, which Grafana
+# treats as NoData and pages on — the original 3 rules did exactly that.
+#
+# All rules route straight to the existing 'Discord' contact point. The first 3
+# reuse their original UIDs so provisioning adopts/overwrites the old UI rules.
+grafana:
+  alerting:
+    rules.yaml:
+      apiVersion: 1
+      groups:
+      - orgId: 1
+        name: Homelab
+        folder: Alerts
+        interval: 1m
+        rules:
+        - uid: bfqjb8prjo268d
+          title: Node memory high
+          condition: C
+          for: 5m
+          noDataState: OK
+          execErrState: OK
+          annotations:
+            summary: Node memory usage above 90%.
+          labels:
+            source: homelab
+          notification_settings:
+            receiver: Discord
+          data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: 100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+              instant: true
+              range: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              legendFormat: __auto
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+              - type: query
+                operator:
+                  type: and
+                query:
+                  params:
+                  - C
+                reducer:
+                  type: last
+                  params: []
+                evaluator:
+                  type: gt
+                  params:
+                  - 90
+        - uid: cfqjbzlzvs16oa
+          title: Node CPU high
+          condition: C
+          for: 10m
+          noDataState: OK
+          execErrState: OK
+          annotations:
+            summary: Node CPU usage above 90% (5m avg).
+          labels:
+            source: homelab
+          notification_settings:
+            receiver: Discord
+          data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+              instant: true
+              range: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              legendFormat: __auto
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+              - type: query
+                operator:
+                  type: and
+                query:
+                  params:
+                  - C
+                reducer:
+                  type: last
+                  params: []
+                evaluator:
+                  type: gt
+                  params:
+                  - 90
+        - uid: cfqjbuuvep534d
+          title: Root disk almost full
+          condition: C
+          for: 5m
+          noDataState: OK
+          execErrState: OK
+          annotations:
+            summary: Root filesystem above 85% full.
+          labels:
+            source: homelab
+          notification_settings:
+            receiver: Discord
+          data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: 100 * (1 - node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs"})
+              instant: true
+              range: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              legendFormat: __auto
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+              - type: query
+                operator:
+                  type: and
+                query:
+                  params:
+                  - C
+                reducer:
+                  type: last
+                  params: []
+                evaluator:
+                  type: gt
+                  params:
+                  - 85
+        - uid: homelab-pod-oomkilled
+          title: Pod OOMKilled
+          condition: C
+          for: 1m
+          noDataState: OK
+          execErrState: OK
+          annotations:
+            summary: A container was OOMKilled in the last 30m (node memory pressure).
+          labels:
+            source: homelab
+          notification_settings:
+            receiver: Discord
+          data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: sum(max_over_time(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[30m])) or vector(0)
+              instant: true
+              range: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              legendFormat: __auto
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+              - type: query
+                operator:
+                  type: and
+                query:
+                  params:
+                  - C
+                reducer:
+                  type: last
+                  params: []
+                evaluator:
+                  type: gt
+                  params:
+                  - 0
+        - uid: homelab-pod-crashloop
+          title: Pod crash-looping
+          condition: C
+          for: 10m
+          noDataState: OK
+          execErrState: OK
+          annotations:
+            summary: A container restarted >3 times in 15m.
+          labels:
+            source: homelab
+          notification_settings:
+            receiver: Discord
+          data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: max(increase(kube_pod_container_status_restarts_total[15m])) or vector(0)
+              instant: true
+              range: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              legendFormat: __auto
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+              - type: query
+                operator:
+                  type: and
+                query:
+                  params:
+                  - C
+                reducer:
+                  type: last
+                  params: []
+                evaluator:
+                  type: gt
+                  params:
+                  - 3
+        - uid: homelab-pvc-almost-full
+          title: PVC almost full
+          condition: C
+          for: 5m
+          noDataState: OK
+          execErrState: OK
+          annotations:
+            summary: A PersistentVolumeClaim is above 85% full.
+          labels:
+            source: homelab
+          notification_settings:
+            receiver: Discord
+          data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: 100 * max(1 - kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes) or vector(0)
+              instant: true
+              range: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              legendFormat: __auto
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+              - type: query
+                operator:
+                  type: and
+                query:
+                  params:
+                  - C
+                reducer:
+                  type: last
+                  params: []
+                evaluator:
+                  type: gt
+                  params:
+                  - 85
+        - uid: homelab-node-not-ready
+          title: Node not Ready
+          condition: C
+          for: 5m
+          noDataState: OK
+          execErrState: OK
+          annotations:
+            summary: A node is not in Ready state.
+          labels:
+            source: homelab
+          notification_settings:
+            receiver: Discord
+          data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              editorMode: code
+              expr: count(kube_node_status_condition{condition="Ready",status="true"} == 0) or vector(0)
+              instant: true
+              range: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              legendFormat: __auto
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+              - type: query
+                operator:
+                  type: and
+                query:
+                  params:
+                  - C
+                reducer:
+                  type: last
+                  params: []
+                evaluator:
+                  type: gt
+                  params:
+                  - 0
+

@@ -18,6 +18,8 @@ spec:
       helm:
         valueFiles:
           - $values/platform/kube-prometheus-stack/values.yaml
+          # Grafana-managed alert rules (Discord-routed), provisioned declaratively.
+          - $values/platform/kube-prometheus-stack/alerting-values.yaml
     - repoURL: https://github.com/vercevo/gitops-cluster
       targetRevision: HEAD
       ref: values

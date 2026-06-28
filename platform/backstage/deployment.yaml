@@ -4,7 +4,9 @@ metadata:
   name: backstage
   namespace: backstage
 spec:
-  replicas: 1
+  # DISABLED to free RAM on the 7.6Gi node (see RUNBOOK backstage entry).
+  # Revive: set back to 1 AND re-add postgres.yaml (the CNPG Cluster was dropped).
+  replicas: 0
   selector:
     matchLabels:
       app: backstage

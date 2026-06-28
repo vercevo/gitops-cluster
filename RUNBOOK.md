@@ -233,9 +233,20 @@ are run as needed — see "Secrets" above and the component entries below.
   ServiceMonitor/PodMonitor/PrometheusRule CRDs exist before app-level monitors.
   **Grafana** at `grafana.bergtobias.com` via **native Authentik OIDC**
   (`generic_oauth`, not oauth2-proxy); the `Grafana Admins` Authentik group maps
-  to admin, else Viewer. Secret via `bootstrap/grafana-secret.sh`. **Scope is
-  metrics + dashboards only** — Alertmanager is disabled and logs (Loki/Alloy on
-  MinIO S3) and traces (Tempo) are deferred. **Gotchas:**
+  to admin, else Viewer. Secret via `bootstrap/grafana-secret.sh`. **Alerting is
+  on:** Alertmanager runs (bundled `defaultRules` for k8s/node), and a set of
+  **Grafana-managed rules routed to Discord** is provisioned declaratively from
+  `platform/kube-prometheus-stack/alerting-values.yaml` (merged via a second
+  `valueFiles` entry) — node mem/CPU/disk, pod OOMKilled, crash-looping, PVC full,
+  node-not-Ready. Logs (Loki) and traces (Tempo, now removed) are separate. **Gotchas:**
+  - **Grafana alert rules: put the threshold in expression C, NOT in the query.**
+    A rule whose query is `expr > 90` returns *no rows* while healthy; Grafana reads
+    that empty result as **NoData** and (with `noDataState` set to alert) pages you
+    with `alertname=DatasourceNoData` — i.e. it fires precisely *because the box is
+    fine*. The fix: query A returns the raw value, expression C is a `threshold`
+    (`gt 90`), and `noDataState: OK`. The original 3 UI-made rules had this bug;
+    `alerting-values.yaml` reuses their UIDs so provisioning overwrites them.
+    Provisioned rules are read-only in the UI (provenance=file) — edit git, not the UI.
   - **Authentik OIDC endpoints are GLOBAL, not per-slug.** Grafana's
     `auth_url`/`token_url`/`api_url` must be `/application/o/{authorize,token,userinfo}/`
     (no slug). Only the **issuer** and **jwks_uri** are per-app-slug
@@ -274,31 +285,29 @@ are run as needed — see "Secrets" above and the component entries below.
   - **Loki S3 creds come from the `loki-s3` secret via env** (`AWS_ACCESS_KEY_ID`/
     `AWS_SECRET_ACCESS_KEY`, `singleBinary.extraEnvFrom`) — the s3 config block carries
     no keys, so nothing secret lands in git.
-- **tempo + opentelemetry-collector** — distributed tracing (Phase 3, completing the
-  Grafana **LGTM** stack: Prometheus=metrics, Loki=logs, Tempo=traces, all in Grafana —
-  no ELK/Jaeger needed). **Tempo** (`grafana/tempo`, single-binary, ns `tempo`) stores
-  trace blocks in the MinIO **`tempo` bucket** (S3); 72h retention; receives OTLP on
-  4317/4318; **query API on port 3200** (datasource configmap → `monitoring` ns).
-  **OpenTelemetry Collector** (`open-telemetry/opentelemetry-collector`, contrib image,
-  deployment mode, ns `opentelemetry`) is the OTLP ingest gateway — apps send spans to
-  `opentelemetry-collector.opentelemetry.svc:4317` and it forwards to Tempo. **Traces
-  stay empty until apps emit OTLP spans** (nothing is auto-instrumented yet). S3 creds
-  via `bootstrap/tempo-secret.sh` (`tempo-s3`, MinIO root creds, env not git). **Gotchas:**
-  - **MinIO buckets aren't auto-created when added to an existing tenant** — adding a
-    bucket to `tenant.yaml.spec.buckets` did not provision it; create it once with `mc`
-    (`mc mb`) using creds injected from the secret (never as pod-spec args). Loki/Tempo
-    crash-loop with `NoSuchBucket` until the bucket exists.
-  - **OTel chart requires `mode` + `image.repository` explicitly** (no defaults); use the
-    contrib image with `command.name: otelcol-contrib`.
+- **tempo + opentelemetry-collector** — **⚠ REMOVED to free RAM** on the 7.6Gi node
+  (the tracing tail was ~180Mi of pure overhead: **traces stayed empty because nothing
+  is auto-instrumented yet**). The `platform/tempo` and `platform/opentelemetry-collector`
+  Application dirs were deleted, so the `platform` app-of-apps pruned both. This drops the
+  **T** from the Grafana **LGTM** stack — metrics (Prometheus) + logs (Loki) remain.
+  **Revive** when apps actually emit OTLP spans: restore both dirs from git history
+  (`git checkout <pre-removal-sha> -- platform/tempo platform/opentelemetry-collector`),
+  re-run `bootstrap/tempo-secret.sh`, and ensure the `tempo` MinIO bucket exists (the
+  operator doesn't auto-create buckets on an existing tenant — `mc mb` it once). The OTel
+  chart needs `mode` + `image.repository` set explicitly (contrib image,
+  `command.name: otelcol-contrib`). The `tempo` MinIO bucket + its 5Gi PVC were left
+  in place.
 - **dagster** — Dagster orchestrator for the `elt-tutorial` ELT (ns `dagster`),
   replacing Airflow. **⚠ COMPUTE CURRENTLY DISABLED** to free RAM for the
   observability stack — this 7.6Gi node can't run both (the Evidence build was
   OOM-crash-looping). In git: `dagsterWebserver.replicaCount: 0`,
   `dagsterDaemon.enabled: false`, `dagster-user-deployments.{enabled,enableSubchart}: false`
   (both flags needed — disabling only `enabled` fails the webserver workspace template),
-  `evidence`/`oauth2-proxy` `replicas: 0`. The **CNPG Postgres data (jaffle-pg/dagster-pg)
-  is left running and untouched**. Re-enable by restoring those replica counts / flags
-  once the node has more RAM. Official Helm chart (`dagster/dagster`, multi-source app +
+  `evidence`/`oauth2-proxy` `replicas: 0`. **The CNPG DBs (jaffle-pg/dagster-pg) have
+  been DROPPED** (disposable ELT/demo data) to relieve the leader-election-flapping CNPG
+  operator (fewer clusters). Reviving dagster therefore means restoring the replica
+  counts/flags **and** re-adding `postgres.yaml` (the 2 Clusters) + re-materializing data.
+  Official Helm chart (`dagster/dagster`, multi-source app +
   `applications/dagster/values.yaml`). `K8sRunLauncher` (each run is a Job pod);
   metadata DB is CNPG `dagster-pg`, the analytics **warehouse** is CNPG `jaffle-pg`
   (db `jaffle`, schema `main`). Code-location image
@@ -316,9 +325,14 @@ are run as needed — see "Secrets" above and the component entries below.
     pod's image + PG* env — otherwise runs can't reach the warehouse.
   - **Evidence builds at pod start**, but the warehouse is empty until the first
     materialization: `kubectl rollout restart deploy/evidence -n dagster` after a run.
-- **harbor** — OCI registry at `harbor.bergtobias.com`. Internal pushes bypass
-  Cloudflare's 100MB limit via a CoreDNS rewrite (`platform/coredns`) that
-  points `harbor.bergtobias.com` at `traefik.traefik.svc.cluster.local`.
+- **backstage** — developer portal at `backstage.bergtobias.com` (ns `backstage`, raw
+  manifests). **⚠ CURRENTLY DISABLED** to free RAM on the 7.6Gi node: its
+  ArgoCD **auto-sync is off** (`automated` block commented in `application.yaml`),
+  `deployment.yaml` `replicas: 0`, and **the CNPG DB (`backstage-pg`) was DROPPED**
+  (`postgres.yaml` removed — catalog is re-ingestible from git). Because auto-sync is off,
+  the running Deployment + Cluster were torn down with `kubectl delete` (git won't recreate
+  them). **Revive:** restore `replicas: 1`, re-add `postgres.yaml` from git history, then
+  `argocd app sync backstage` (or re-enable the `automated` block).
 - **authentik** — SSO at `authentik.bergtobias.com`. Admin ops via
   `kubectl exec -n authentik deploy/authentik-server -- ak shell`. **Blueprints
   (config-as-code):** custom blueprints live in
@@ -328,8 +342,8 @@ are run as needed — see "Secrets" above and the component entries below.
   Discovery runs periodically; force it with
   `ak shell -c 'from authentik.blueprints.v1.tasks import blueprints_discovery; blueprints_discovery.delay()'`
   on the **worker**, then check `BlueprintInstance` status. **All OIDC providers +
-  applications are now declarative** (argocd, backstage, harbor, dagster, grafana,
-  minio) in the `oidc-apps.yaml` blueprint, plus the `Grafana Admins` group. Each
+  applications are now declarative** (argocd, backstage, dagster, grafana, minio,
+  johanjoel, umami) in the `oidc-apps.yaml` blueprint, plus the `Grafana Admins` group. Each
   provider's **client_secret is set via `!Env OIDC_<APP>_CLIENT_SECRET`**, injected
   into the authentik pods (values.yaml `global.env`) from the **`authentik-oidc-secrets`**
   Secret (SOPS: `platform/secrets/authentik-oidc-secrets.sops.yaml`) — so secrets never
