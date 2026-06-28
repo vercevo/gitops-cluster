@@ -11,6 +11,8 @@ data:
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Johan &amp; Joel festar satan! 🔥</title>
+      <!-- Umami analytics — separate website-id from home, so stats don't mix -->
+      <script defer src="https://umami.bergtobias.com/script.js" data-website-id="e102bb8f-e5f0-409d-8a88-caf4a7912742"></script>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { height: 100%; overflow: hidden; }
