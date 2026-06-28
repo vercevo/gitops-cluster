@@ -1,0 +1,29 @@
+# Umami analytics at umami.bergtobias.com. Direct to the umami Service (NOT behind
+# oauth2-proxy): the tracking endpoints (/script.js, /api/send) must be public so
+# home.bergtobias.com can send events; the dashboard is protected by Umami's own
+# login. No CNAME — the *.bergtobias.com wildcard resolves it.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: umami
+  namespace: umami
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: main
+      namespace: traefik
+      sectionName: websecure
+  hostnames:
+    - umami.bergtobias.com
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: umami
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /

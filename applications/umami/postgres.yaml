@@ -1,0 +1,29 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: umami-pg
+  namespace: umami
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:15
+  # Expose CNPG metrics to Prometheus (PodMonitor CRD from kube-prometheus-stack).
+  monitoring:
+    enablePodMonitor: true
+  storage:
+    size: 3Gi
+  managed:
+    roles:
+      - name: umami
+        ensure: present
+        createdb: true
+        login: true
+        inherit: true
+        connectionLimit: -1
+        passwordSecret:
+          name: umami-pg-user
+  bootstrap:
+    initdb:
+      database: umami
+      owner: umami
+      secret:
+        name: umami-pg-user
