@@ -125,6 +125,22 @@ data:
           </a>
         </div>
 
+        <h2 class="section">Analytics</h2>
+        <div class="grid">
+          <a class="card" href="https://umami.bergtobias.com/share/232105c73b9118f5/home">
+            <div class="ico">📊</div>
+            <div class="name">Analytics · home</div>
+            <div class="desc">Umami-dashboard för den här sidan. Authentik-skyddad, ingen Umami-login.</div>
+            <div class="host">umami.bergtobias.com</div>
+          </a>
+          <a class="card" href="https://umami.bergtobias.com/share/b02a70da38cc0715/johanjoel">
+            <div class="ico">📈</div>
+            <div class="name">Analytics · johanjoel</div>
+            <div class="desc">Umami-dashboard för festsidan (egen website, separat statistik).</div>
+            <div class="host">umami.bergtobias.com</div>
+          </a>
+        </div>
+
         <footer>
           Served by nginx · <code>applications/home</code> · github.com/vercevo/gitops-cluster
         </footer>
