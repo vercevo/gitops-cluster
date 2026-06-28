@@ -1,7 +1,7 @@
-# Umami analytics at umami.bergtobias.com. Direct to the umami Service (NOT behind
-# oauth2-proxy): the tracking endpoints (/script.js, /api/send) must be public so
-# home.bergtobias.com can send events; the dashboard is protected by Umami's own
-# login. No CNAME — the *.bergtobias.com wildcard resolves it.
+# Umami at umami.bergtobias.com → oauth2-proxy (Authentik SSO gate). oauth2-proxy
+# skip-auths the tracking endpoints (/script.js, /api/send) so home.bergtobias.com
+# still works, and gates the dashboard behind Authentik. No CNAME — the wildcard
+# resolves it.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -20,8 +20,8 @@ spec:
     - backendRefs:
         - group: ""
           kind: Service
-          name: umami
-          port: 3000
+          name: oauth2-proxy
+          port: 80
           weight: 1
       matches:
         - path:
