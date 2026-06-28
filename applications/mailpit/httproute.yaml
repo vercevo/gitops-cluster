@@ -1,0 +1,28 @@
+# Mailpit UI at mail.bergtobias.com, behind Authentik SSO (route targets
+# oauth2-proxy, not mailpit directly). No CNAME — the *.bergtobias.com wildcard
+# resolves it; Traefik host-routes by hostname.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mailpit
+  namespace: mailpit
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: main
+      namespace: traefik
+      sectionName: websecure
+  hostnames:
+    - mail.bergtobias.com
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: oauth2-proxy
+          port: 80
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
