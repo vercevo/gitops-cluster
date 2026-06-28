@@ -27,8 +27,6 @@ global:
       valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_ARGOCD_CLIENT_SECRET } }
     - name: OIDC_BACKSTAGE_CLIENT_SECRET
       valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_BACKSTAGE_CLIENT_SECRET } }
-    - name: OIDC_HARBOR_CLIENT_SECRET
-      valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_HARBOR_CLIENT_SECRET } }
     - name: OIDC_DAGSTER_CLIENT_SECRET
       valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_DAGSTER_CLIENT_SECRET } }
     - name: OIDC_GRAFANA_CLIENT_SECRET
@@ -37,8 +35,6 @@ global:
       valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_MINIO_CLIENT_SECRET } }
     - name: OIDC_JOHANJOEL_CLIENT_SECRET
       valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_JOHANJOEL_CLIENT_SECRET } }
-    - name: OIDC_MAILPIT_CLIENT_SECRET
-      valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_MAILPIT_CLIENT_SECRET } }
     - name: OIDC_UMAMI_CLIENT_SECRET
       valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_UMAMI_CLIENT_SECRET } }
 

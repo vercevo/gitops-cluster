@@ -4,8 +4,6 @@ metadata:
   name: coredns-custom
   namespace: kube-system
 data:
-  harbor.override: |
-    rewrite name harbor.bergtobias.com traefik.traefik.svc.cluster.local
   noipv6.override: |
     template ANY AAAA {
       rcode NOERROR
