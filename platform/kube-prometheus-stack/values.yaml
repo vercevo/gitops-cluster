@@ -1,10 +1,46 @@
 # kube-prometheus-stack — single-node k3s homelab sizing.
 # Scope: metrics + dashboards. Logs (Loki) and alerting (Alertmanager) are
 # deliberately deferred — see RUNBOOK and the observability plan.
-
 # --- Alerting deferred this phase: keep Alertmanager off to save RAM. ---
 alertmanager:
-  enabled: false
+  enabled: true
+
+  alertmanagerSpec:
+    replicas: 1
+    retention: 24h
+
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 96Mi
+
+defaultRules:
+  create: true
+
+  rules:
+    alertmanager: false
+    etcd: false
+    kubeControllerManager: false
+    kubeProxy: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+
+    general: true
+    k8s: true
+    kubeApiserver: true
+    kubePrometheusNodeAlerting: true
+    kubePrometheusNodeRecording: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    network: true
+    node: true
+    nodeExporterAlerting: true
+    nodeExporterRecording: true
+    prometheus: true
 
 # --- k3s runs the control plane in a single binary, so these components are
 # NOT separately scrapable. Disabling them avoids permanently-"down" targets. ---
