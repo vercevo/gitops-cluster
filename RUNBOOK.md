@@ -270,21 +270,20 @@ are run as needed — see "Secrets" above and the component entries below.
     Prometheus datasource and load the bundled dashboards. An earlier over-trim set
     them `false`, which left Grafana with **no datasource at all** (manual
     `additionalDataSources` did not render a provisioning file). They are on.
-- **loki + promtail** — log aggregation (ns `loki`), the Phase 2 of observability.
-  **Loki** (`grafana/loki`, single-binary/monolithic mode) stores chunks + index in
-  the MinIO **`loki` bucket** (S3, `minio.minio.svc.cluster.local:80`, path-style,
-  plain HTTP); 72h retention. **Promtail** (`grafana/promtail`, DaemonSet) tails all
-  pod logs → Loki. Grafana queries it via a **Loki datasource** shipped as a labelled
-  configmap (`grafana_datasource: "1"`) into the `monitoring` ns so the Grafana sidecar
-  auto-provisions it. S3 creds via `bootstrap/loki-secret.sh` (secret `loki-s3`, reuses
-  the MinIO root creds; read from env, not git). **Gotchas:**
-  - **Disable the chart's memcached caches.** `chunksCache`/`resultsCache` default to
-    multi-GiB memory requests and would never schedule on this node — both `enabled: false`,
-    along with the scalable-mode `read`/`write`/`backend`, the bundled `minio`, `gateway`,
-    and `lokiCanary`. Single-binary + S3 only.
-  - **Loki S3 creds come from the `loki-s3` secret via env** (`AWS_ACCESS_KEY_ID`/
-    `AWS_SECRET_ACCESS_KEY`, `singleBinary.extraEnvFrom`) — the s3 config block carries
-    no keys, so nothing secret lands in git.
+- **loki + promtail** — **⚠ REMOVED to free RAM** on the 7.6Gi node (was ~237Mi:
+  loki 172 + promtail 65). The node was at 79% and swapping; dropping the logging tail
+  reclaimed the most RAM with the least loss (single-node homelab, logs were 72h-retention
+  only). The `platform/loki` and `platform/promtail` Application dirs were deleted, so the
+  `platform` app-of-apps pruned both. This also freed Loki's **only** live MinIO consumer,
+  so the **minio Tenant was dropped too** (see **minio** below). This leaves Grafana with
+  **metrics only** (Prometheus) — the **L** and the storage tail of LGTM are gone.
+  **Revive:** restore both dirs from git history
+  (`git checkout <pre-removal-sha> -- platform/loki platform/promtail`), bring the minio
+  Tenant back first (Loki needs the `loki` bucket on S3), then re-run
+  `bootstrap/loki-secret.sh`. Loki was `grafana/loki` single-binary → the MinIO `loki`
+  bucket (`minio.minio.svc.cluster.local:80`, path-style, plain HTTP), with the chart's
+  memcached caches / scalable-mode / bundled minio / gateway / canary all disabled, and
+  S3 creds from the `loki-s3` secret via `singleBinary.extraEnvFrom`.
 - **tempo + opentelemetry-collector** — **⚠ REMOVED to free RAM** on the 7.6Gi node
   (the tracing tail was ~180Mi of pure overhead: **traces stayed empty because nothing
   is auto-instrumented yet**). The `platform/tempo` and `platform/opentelemetry-collector`
@@ -352,23 +351,22 @@ are run as needed — see "Secrets" above and the component entries below.
   app). Airflow (retired) is intentionally excluded. **To add a new OIDC app:** add its
   client_secret to the SopsSecret + a `global.env` entry, add an entry to the generator/
   blueprint, push — match `client_id`/flows exactly or you'll break live login.
-- **minio** — S3 object storage. Operator (`minio-operator`) + Tenant `techdocs`
-  (`minio` ns, SNSD). Buckets: `techdocs` (Backstage), `loki`, `tempo`. S3 API
-  external at `s3.bergtobias.com`; in-cluster at
-  `http://minio.minio.svc.cluster.local` (port 80). Root creds in
-  `minio-tenant-config` (ns minio); Backstage read creds in `minio-techdocs`
-  (ns backstage). See `bootstrap/minio-secret.sh`. **Console** (admin UI) at
-  `minio.bergtobias.com` (`techdocs-console:9090`) with **Authentik OIDC** login,
-  role-policy mode (`MINIO_IDENTITY_OPENID_ROLE_POLICY=consoleAdmin` — any user who
-  passes the Authentik `minio` app gets full admin). See `bootstrap/minio-oidc-secret.sh`.
-  **Gotchas:**
-  - **The operator does NOT auto-create buckets added to an existing tenant**, and
-    **operator v7.1.1 does not render Tenant `spec.env` into the StatefulSet.** So:
-    new buckets are created once with `mc` (see the loki/tempo entry), and **OIDC env
-    is injected into the `config.env` secret** (which MinIO reliably sources), not via
-    `spec.env`. `minio-oidc-secret.sh` patches `config.env` and restarts the pod.
-  - **Re-running `minio-secret.sh` rewrites `config.env` and drops the OIDC lines** —
-    re-run `minio-oidc-secret.sh` afterwards.
+- **minio** — S3 object storage. **Operator KEPT, Tenant DROPPED.** The
+  `minio-operator` (<27Mi, two tiny controllers) stays — it's cheap and finalizes the
+  tenant deletion cleanly. The **Tenant `techdocs` was removed (~300Mi)**: its only live
+  consumer was Loki (now removed), and Backstage/`techdocs` is disabled, Tempo gone — so
+  it had nothing left to serve. `platform/minio-tenant` was deleted; the `platform`
+  app-of-apps pruned the Tenant + its console/S3 HTTPRoutes + PVCs. **Revive:** restore
+  `platform/minio-tenant` from git history, re-run `bootstrap/minio-secret.sh`, then (for
+  Loki/Tempo) `bootstrap/loki-secret.sh` / `tempo-secret.sh` and `mc mb` the buckets — the
+  operator does **not** auto-create buckets on an existing tenant. Tenant was SNSD; buckets
+  `techdocs`/`loki`/`tempo`; S3 external at `s3.bergtobias.com`, in-cluster
+  `http://minio.minio.svc.cluster.local:80`; Console at `minio.bergtobias.com` via Authentik
+  OIDC (role-policy `consoleAdmin`). **Gotcha that survives revival:** OIDC env must go into
+  the `config.env` secret (operator v7.1.1 ignores Tenant `spec.env`); `minio-oidc-secret.sh`
+  patches it, and re-running `minio-secret.sh` drops the OIDC lines (re-run the oidc script).
+  The leftover `minio-tenant-config` / `loki-s3` / `tempo-s3` secrets and the Authentik
+  `minio` OIDC app are now unused but harmless (left in place, like Tempo's bucket was).
 
 ## Quick checks
 
