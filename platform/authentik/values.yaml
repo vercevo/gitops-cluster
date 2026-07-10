@@ -37,6 +37,11 @@ global:
       valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_JOHANJOEL_CLIENT_SECRET } }
     - name: OIDC_UMAMI_CLIENT_SECRET
       valueFrom: { secretKeyRef: { name: authentik-oidc-secrets, key: OIDC_UMAMI_CLIENT_SECRET } }
+    # Actual's secret lives in its own SopsSecret (actual-oidc-authentik-secret),
+    # not in authentik-oidc-secrets — added standalone so encrypting it only needed
+    # the repo's public age key, without decrypting the existing shared file.
+    - name: OIDC_ACTUAL_CLIENT_SECRET
+      valueFrom: { secretKeyRef: { name: actual-oidc-authentik-secret, key: OIDC_ACTUAL_CLIENT_SECRET } }
 
 postgresql:
   enabled: false

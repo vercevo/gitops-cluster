@@ -368,6 +368,28 @@ are run as needed — see "Secrets" above and the component entries below.
   The leftover `minio-tenant-config` / `loki-s3` / `tempo-s3` secrets and the Authentik
   `minio` OIDC app are now unused but harmless (left in place, like Tempo's bucket was).
 
+- **actual** — Actual Budget (personal finance) at `actual.bergtobias.com` (ns
+  `actual`, raw manifests, `bootstrap/`-free). Official image `actualbudget/actual-server`,
+  port `5006`, SQLite data on a `local-path` PVC (`actual-data`, 2Gi) — **not** CNPG,
+  Actual doesn't use Postgres. **Native OIDC** (unlike umami/johanjoel/dagster) — no
+  oauth2-proxy; the HTTPRoute targets the `actual` Service directly.
+  `ACTUAL_OPENID_DISCOVERY_URL` is the **per-app-slug** Authentik endpoint
+  (`https://authentik.bergtobias.com/application/o/actual/`) — Actual does its own
+  `.well-known` discovery from that, so (like oauth2-proxy) it **avoids** the
+  global-authorize-URL gotcha that native clients like Grafana hit.
+  `ACTUAL_OPENID_CLIENT_ID`/`SERVER_HOSTNAME` are plain env (not secret — the
+  client_id is already committed in cleartext in the Authentik blueprint below, same
+  as every other app); `ACTUAL_OPENID_CLIENT_SECRET` comes from `actual-secrets`
+  (SOPS). **Gotcha: first OIDC login becomes the Actual server owner/admin** — log in
+  as yourself first. **Secrets are pure SOPS, no bootstrap script**: the Authentik-side
+  client secret lives in its own `actual-oidc-authentik-secret` SopsSecret
+  (`platform/secrets/actual-oidc-authentik.sops.yaml`), **not** appended into the
+  shared `authentik-oidc-secrets` file — that file already holds 7 apps' secrets
+  encrypted, and appending to it requires decrypting the whole document (the private
+  age key), whereas a standalone secret only needs the **public** age key (safe in
+  git) to create. Same client_secret value duplicated into `actual-secrets` (ns
+  `actual`) for the app's own side of the handshake.
+
 ## Quick checks
 
 ```bash
