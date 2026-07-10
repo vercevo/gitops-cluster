@@ -235,4 +235,34 @@ data:
           slug: "umami"
           provider: !KeyOf provider-umami
           meta_launch_url: "https://umami.bergtobias.com"
+      # ---- actual (native OIDC, no oauth2-proxy) ----
+      - model: authentik_providers_oauth2.oauth2provider
+        id: provider-actual
+        identifiers:
+          name: "actual"
+        attrs:
+          name: "actual"
+          client_type: confidential
+          client_id: "dd2841af0491d44bdd04f4fc6f738ec30288a861"
+          client_secret: !Env OIDC_ACTUAL_CLIENT_SECRET
+          sub_mode: hashed_user_id
+          include_claims_in_id_token: true
+          authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+          signing_key: !Find [authentik_crypto.certificatekeypair, [name, "authentik Self-signed Certificate"]]
+          property_mappings:
+            - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+            - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+            - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+          redirect_uris:
+            - matching_mode: strict
+              url: "https://actual.bergtobias.com/openid/callback"
+      - model: authentik_core.application
+        identifiers:
+          slug: "actual"
+        attrs:
+          name: "Actual Budget"
+          slug: "actual"
+          provider: !KeyOf provider-actual
+          meta_launch_url: "https://actual.bergtobias.com"
 
