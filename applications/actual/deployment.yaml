@@ -28,6 +28,11 @@ spec:
       labels:
         app: actual
     spec:
+      # Kubernetes auto-injects Docker-links-style env vars for every Service in the
+      # namespace (e.g. ACTUAL_PORT=tcp://<ip>:5006 for the Service named "actual"),
+      # which collides with actual-server's own ACTUAL_PORT config var and crashes it
+      # ("port: ports must be within range 0 - 65535"). Disable that injection.
+      enableServiceLinks: false
       containers:
         - name: actual
           image: actualbudget/actual-server:latest
