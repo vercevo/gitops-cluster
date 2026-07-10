@@ -21,6 +21,11 @@ data:
           name: Grafana Admins
         attrs:
           name: Grafana Admins
+      - model: authentik_core.group
+        identifiers:
+          name: Actual-users
+        attrs:
+          name: Actual-users
 
   oidc-apps.yaml: |
     version: 1
@@ -265,4 +270,14 @@ data:
           slug: "actual"
           provider: !KeyOf provider-actual
           meta_launch_url: "https://actual.bergtobias.com"
+      # Gate access: only members of "Actual-users" may reach/log into this app
+      # (direct group binding, no expression policy needed).
+      - model: authentik_policies.policybinding
+        identifiers:
+          target: !Find [authentik_core.application, [slug, "actual"]]
+          group: !Find [authentik_core.group, [name, "Actual-users"]]
+          order: 0
+        attrs:
+          enabled: true
+          negate: false
 

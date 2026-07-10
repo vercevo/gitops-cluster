@@ -388,7 +388,14 @@ are run as needed — see "Secrets" above and the component entries below.
   encrypted, and appending to it requires decrypting the whole document (the private
   age key), whereas a standalone secret only needs the **public** age key (safe in
   git) to create. Same client_secret value duplicated into `actual-secrets` (ns
-  `actual`) for the app's own side of the handshake.
+  `actual`) for the app's own side of the handshake. **Access is gated to the
+  `Actual-users` Authentik group** — a direct group `PolicyBinding` on the
+  `actual` Application (no expression policy needed), declared in the
+  `oidc-apps.yaml` blueprint alongside the group itself (`gitops-groups.yaml`).
+  **The group starts empty** — blueprints only declare the group's existence,
+  not membership (same as `Grafana Admins`); add members via the Authentik UI
+  (Directory → Groups → Actual-users) or `ak shell`, **or nobody can log in,
+  including you.**
 
 ## Quick checks
 
